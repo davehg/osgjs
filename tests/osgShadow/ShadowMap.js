@@ -1,16 +1,15 @@
-'use strict';
-var assert = require('chai').assert;
-var mockup = require('tests/mockup/mockup');
-var BoundingBox = require('osg/BoundingBox');
-var Light = require('osg/Light');
-var ShadowMap = require('osgShadow/ShadowMap');
-var ShadowSettings = require('osgShadow/ShadowSettings');
-var vec2 = require('osg/glMatrix').vec2;
-var vec3 = require('osg/glMatrix').vec3;
-var vec4 = require('osg/glMatrix').vec4;
-var mat4 = require('osg/glMatrix').mat4;
+import { assert } from 'chai';
+import mockup from 'tests/mockup/mockup';
+import BoundingBox from 'osg/BoundingBox';
+import Light from 'osg/Light';
+import ShadowMap from 'osgShadow/ShadowMap';
+import ShadowSettings from 'osgShadow/ShadowSettings';
+import { vec2 } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
+import { vec4 } from 'osg/glMatrix';
+import { mat4 } from 'osg/glMatrix';
 
-module.exports = function() {
+export default function() {
     var matrixCompare = function(matrix1, matrix2) {
         for (var i = 0; i < 16; i++) {
             if (Math.abs(matrix1[i] - matrix2[i]) > 1e-5) {
@@ -31,10 +30,10 @@ module.exports = function() {
         /// TEST SPOT
 
         //SPOT INSIDE BOUNDINGBOX
-        frustumBound.expandByvec3(
+        frustumBound.expandByVec3(
             vec3.fromValues(8.9969263076782231, 6.6672196388244632, 10.771773338317871)
         );
-        frustumBound.expandByvec3(
+        frustumBound.expandByVec3(
             vec3.fromValues(-7.3858900070190431, -9.332790374755862, -0.39151200652122503)
         );
 
@@ -107,10 +106,10 @@ module.exports = function() {
 
         //SPOT OUTSIDE BOUNDINGBOX
 
-        frustumBound.expandByvec3(
+        frustumBound.expandByVec3(
             vec3.fromValues(8.9969263076782231, 6.6672196388244632, 10.771773338317871)
         );
-        frustumBound.expandByvec3(
+        frustumBound.expandByVec3(
             vec3.fromValues(-7.3858900070190431, -9.332790374755862, -0.391512006521225)
         );
 
@@ -219,10 +218,10 @@ module.exports = function() {
         /// TEST Directional
 
         // DIRECTIONAL LOOKING DOWN
-        frustumBound.expandByvec3(
+        frustumBound.expandByVec3(
             vec3.fromValues(8.996926307678223, 6.667219638824462, 10.77177333831787)
         );
-        frustumBound.expandByvec3(
+        frustumBound.expandByVec3(
             vec3.fromValues(-7.385890007019043, -9.332790374755858, -0.3915120065212249)
         );
 
@@ -294,10 +293,10 @@ module.exports = function() {
 
         // DIRECTIONAL LOOKING UP
 
-        frustumBound.expandByvec3(
+        frustumBound.expandByVec3(
             vec3.fromValues(8.9969263076782261, 6.6672196388244632, 10.771773338317875)
         );
-        frustumBound.expandByvec3(
+        frustumBound.expandByVec3(
             vec3.fromValues(-7.3858900070190481, -9.332790374755862, -0.39151200652122586)
         );
 
@@ -401,4 +400,4 @@ module.exports = function() {
             'correct near/far shadow  for directional light looking up'
         );
     });
-};
+}

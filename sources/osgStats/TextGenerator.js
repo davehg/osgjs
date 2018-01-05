@@ -1,6 +1,6 @@
-var MACROUTILS = require('osg/Utils');
-var P = require('bluebird');
-var notify = require('osg/notify');
+import utils from 'osg/utils';
+import P from 'bluebird';
+import notify from 'osg/notify';
 
 var DefaultFont = 'Courier New';
 
@@ -53,7 +53,7 @@ var TextGenerator = function() {
     this._createCanvas();
 };
 
-MACROUTILS.createPrototypeObject(TextGenerator, {
+utils.createPrototypeObject(TextGenerator, {
     setFontSize: function(size) {
         this._fontSize = size;
     },
@@ -129,4 +129,4 @@ MACROUTILS.createPrototypeObject(TextGenerator, {
     }
 });
 
-module.exports = TextGenerator;
+export default TextGenerator;

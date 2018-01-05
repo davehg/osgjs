@@ -1,9 +1,8 @@
-'use strict';
-var assert = require('chai').assert;
-var BoundingSphere = require('osg/BoundingSphere');
-var Plane = require('osg/Plane');
+import { assert } from 'chai';
+import BoundingSphere from 'osg/BoundingSphere';
+import Plane from 'osg/Plane';
 
-module.exports = function() {
+export default function() {
     test('Plane', function() {
         var p = Plane.create();
         Plane.setNormal(p, [2, 0, 0]);
@@ -16,14 +15,14 @@ module.exports = function() {
 
         var bSphere = new BoundingSphere();
         bSphere.set([-40, 0, 0], 0.1);
-        bSphere.expandByvec3([-0.1, -0.1, 0.0]);
+        bSphere.expandByVec3([-0.1, -0.1, 0.0]);
 
         assert.isOk(Plane.intersectsOrContainsBoundingSphere(p, bSphere) === Plane.OUTSIDE);
-        bSphere.expandByvec3([1.0, 4.0, 0.0]);
-        bSphere.expandByvec3([2.0, 3.0, 0.0]);
+        bSphere.expandByVec3([1.0, 4.0, 0.0]);
+        bSphere.expandByVec3([2.0, 3.0, 0.0]);
 
         assert.isOk(Plane.intersectsOrContainsBoundingSphere(p, bSphere) === Plane.INTERSECT);
         bSphere.set([40, 0, 0], 1.0);
         assert.isOk(Plane.intersectsOrContainsBoundingSphere(p, bSphere) === Plane.INSIDE);
     });
-};
+}

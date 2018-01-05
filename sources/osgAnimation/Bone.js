@@ -1,10 +1,9 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var vec3 = require('osg/glMatrix').vec3;
-var BoundingBox = require('osg/BoundingBox');
-var mat4 = require('osg/glMatrix').mat4;
-var MatrixTransform = require('osg/MatrixTransform');
-var UpdateBone = require('osgAnimation/UpdateBone');
+import utils from 'osg/utils';
+import { vec3 } from 'osg/glMatrix';
+import BoundingBox from 'osg/BoundingBox';
+import { mat4 } from 'osg/glMatrix';
+import MatrixTransform from 'osg/MatrixTransform';
+import UpdateBone from 'osgAnimation/UpdateBone';
 
 /**
  *  Bone
@@ -19,9 +18,9 @@ var Bone = function(name) {
     this._boneBoundingBox = new BoundingBox();
 };
 
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     Bone,
-    MACROUTILS.objectInherit(MatrixTransform.prototype, {
+    utils.objectInherit(MatrixTransform.prototype, {
         // consistent color depending of id
         // _rand: function ( id ) {
         //     var x = Math.sin( id * 45.233 ) * 43758.5453;
@@ -82,4 +81,4 @@ MACROUTILS.createPrototypeNode(
     'Bone'
 );
 
-module.exports = Bone;
+export default Bone;

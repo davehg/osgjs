@@ -1,7 +1,6 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var NodeVisitor = require('osg/NodeVisitor');
-var KdTree = require('osg/KdTree');
+import utils from 'osg/utils';
+import NodeVisitor from 'osg/NodeVisitor';
+import KdTree from 'osg/KdTree';
 
 var KdTreeBuilder = function(options) {
     NodeVisitor.call(this);
@@ -21,9 +20,9 @@ var KdTreeBuilder = function(options) {
     if (maxLevel !== undefined) this._buildOptions._maxNumLevels = maxLevel;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     KdTreeBuilder,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             if (node.getShape) {
                 var shape = node.getShape();
@@ -42,4 +41,4 @@ MACROUTILS.createPrototypeObject(
     'KdTreeBuilder'
 );
 
-module.exports = KdTreeBuilder;
+export default KdTreeBuilder;

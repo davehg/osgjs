@@ -1,15 +1,14 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var vec3 = require('osg/glMatrix').vec3;
-var Geometry = require('osg/Geometry');
-var Notify = require('osg/notify');
-var mat4 = require('osg/glMatrix').mat4;
-var StateSet = require('osg/StateSet');
-var MorphGeometry = require('osgAnimation/MorphGeometry');
-var UpdateRigGeometry = require('osgAnimation/UpdateRigGeometry');
-var RigTransformHardware = require('osgAnimation/RigTransformHardware');
-var AnimationUpdateCallback = require('osgAnimation/AnimationUpdateCallback');
-var ComputeMatrixFromNodePath = require('osg/computeMatrixFromNodePath');
+import utils from 'osg/utils';
+import { vec3 } from 'osg/glMatrix';
+import Geometry from 'osg/Geometry';
+import notify from 'osg/notify';
+import { mat4 } from 'osg/glMatrix';
+import StateSet from 'osg/StateSet';
+import MorphGeometry from 'osgAnimation/MorphGeometry';
+import UpdateRigGeometry from 'osgAnimation/UpdateRigGeometry';
+import RigTransformHardware from 'osgAnimation/RigTransformHardware';
+import AnimationUpdateCallback from 'osgAnimation/AnimationUpdateCallback';
+import ComputeMatrixFromNodePath from 'osg/computeMatrixFromNodePath';
 
 // RigGeometry is a Geometry deformed by bones
 // To connect bones to RigGeometry it requires:
@@ -50,9 +49,9 @@ var RigGeometry = function() {
     this._needToComputeMatrix = true;
 };
 
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     RigGeometry,
-    MACROUTILS.objectInherit(Geometry.prototype, {
+    utils.objectInherit(Geometry.prototype, {
         getStateSetAnimation: function() {
             return this._stateSetAnimation;
         },
@@ -148,7 +147,7 @@ MACROUTILS.createPrototypeNode(
 
         computeMatrixFromRootSkeleton: function() {
             if (!this._root) {
-                Notify.warn(
+                notify.warn(
                     'Warning ' +
                         this.className() +
                         '.computeMatrixFromRootSkeleton if you have this message it means you miss to call buildTransformer( root ), or your RigGeometry (' +
@@ -455,4 +454,4 @@ MACROUTILS.createPrototypeNode(
     'RigGeometry'
 );
 
-module.exports = RigGeometry;
+export default RigGeometry;

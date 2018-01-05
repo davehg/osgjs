@@ -1,8 +1,6 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var vec3 = require('osg/glMatrix').vec3;
-var IntersectFunctor = require('osgUtil/IntersectFunctor');
+import utils from 'osg/utils';
+import { vec3 } from 'osg/glMatrix';
+import IntersectFunctor from 'osgUtil/IntersectFunctor';
 
 var SphereIntersection = function() {
     IntersectFunctor.Intersection.call(this);
@@ -27,9 +25,9 @@ var SphereIntersectFunctor = function() {
     this._radius = 0.0;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     SphereIntersectFunctor,
-    MACROUTILS.objectInherit(IntersectFunctor.prototype, {
+    utils.objectInherit(IntersectFunctor.prototype, {
         set: function(center, radius) {
             this._center = center;
             this._radius = radius;
@@ -329,4 +327,4 @@ MACROUTILS.createPrototypeObject(
     'SphereIntersectFunctor'
 );
 
-module.exports = SphereIntersectFunctor;
+export default SphereIntersectFunctor;

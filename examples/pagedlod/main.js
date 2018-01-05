@@ -91,12 +91,29 @@
             // config to let dat.gui change the scale
             var lodScaleController = this.gui.add(this._config, 'lodScale', 0.01, 3.0);
             lodScaleController.onChange(function(value) {
-                self.viewer.getCamera().getRenderer().getCullVisitor().setLODScale(value);
+                self.viewer
+                    .getCamera()
+                    .getRenderer()
+                    .getCullVisitor()
+                    .setLODScale(value);
             });
             var acceptRequestscontroller = this.gui.add(this._config, 'acceptNewRequests');
             acceptRequestscontroller.onChange(function(value) {
                 self.viewer.getDatabasePager().setAcceptNewDatabaseRequests(value);
             });
+            this._config['lostContext'] = function() {
+                var gl = this.viewer.getGraphicContext();
+                var ext = gl.getExtension('WEBGL_lose_context');
+                if (!ext) {
+                    osg.log('missing WEBGL_lose_context extension');
+                    return;
+                }
+                ext.loseContext();
+                window.setTimeout(function() {
+                    ext.restoreContext(gl);
+                }, 0);
+            }.bind(this);
+            this.gui.add(this._config, 'lostContext');
         },
         run: function() {
             // The 3D canvas.
@@ -145,7 +162,7 @@
                     plod.y = designation.sCol;
                     group.addChild(plod);
                 }
-                //console.log('l=',parent.level,' x=',parent.x,' y =',parent.y);
+                //osg.log('l=',parent.level,' x=',parent.x,' y =',parent.y);
                 return group;
             };
 

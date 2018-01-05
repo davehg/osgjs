@@ -1,8 +1,9 @@
-'use strict';
-var assert = require('chai').assert;
-var Node = require('osg/Node');
+import { assert } from 'chai';
+import Node from 'osg/Node';
+import PooledResource from 'osg/PooledResource';
+import { mat4 } from 'osg/glMatrix';
 
-module.exports = function() {
+export default function() {
     test('Node', function() {
         var n = new Node();
         assert.isOk(n.children.length === 0, 'number of children must be 0');
@@ -33,7 +34,9 @@ module.exports = function() {
             'boundingSphereComputed must be true if a child call dirtyBound'
         );
 
-        var matrixes = n1.getWorldMatrices();
+        var matrixGenerator = new PooledResource(mat4.create);
+        var functorMatrix = matrixGenerator.getOrCreateObject.bind(matrixGenerator);
+        var matrixes = n1.getWorldMatrices(undefined, functorMatrix);
         assert.isOk(
             matrixes.length === 1 &&
                 matrixes[0][0] === 1.0 &&
@@ -125,4 +128,4 @@ module.exports = function() {
             'Check no need to traverse because no callback anymore'
         );
     });
-};
+}

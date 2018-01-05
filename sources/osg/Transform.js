@@ -1,8 +1,7 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Node = require('osg/Node');
-var mat4 = require('osg/glMatrix').mat4;
-var TransformEnums = require('osg/transformEnums');
+import utils from 'osg/utils';
+import Node from 'osg/Node';
+import { mat4 } from 'osg/glMatrix';
+import TransformEnums from 'osg/transformEnums';
 
 /**
  * Transform - base class for Transform type node ( Camera, MatrixTransform )
@@ -15,9 +14,9 @@ var Transform = function() {
 };
 
 /** @lends Transform.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     Transform,
-    MACROUTILS.objectInherit(Node.prototype, {
+    utils.objectInherit(Node.prototype, {
         setReferenceFrame: function(value) {
             this.referenceFrame = value;
         },
@@ -45,4 +44,4 @@ MACROUTILS.createPrototypeNode(
     'Transform'
 );
 
-module.exports = Transform;
+export default Transform;

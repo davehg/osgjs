@@ -1,19 +1,21 @@
-'use strict';
-var mockup = require('tests/mockup/mockup');
-var mat4 = require('osg/glMatrix').mat4;
-var Node = require('osg/Node');
-var Timer = require('osg/Timer');
-var reportStats = require('benchmarks/reportStats');
-var mockupBench = require('benchmarks/mockupBench');
+import mockup from 'tests/mockup/mockup';
+import { mat4 } from 'osg/glMatrix';
+import Node from 'osg/Node';
+import Timer from 'osg/Timer';
+import reportStats from 'benchmarks/reportStats';
+import mockupBench from 'benchmarks/mockupBench';
 
-module.exports = function() {
+export default function() {
     test('CullVisitor Heavy Static Scene', function() {
         var canvas = mockup.createCanvas(true);
         var viewer = new mockup.Viewer(canvas);
         viewer.setupManipulator();
         viewer.init();
         viewer.frame();
-        var cullVisitor = viewer.getCamera().getRenderer().getCullVisitor();
+        var cullVisitor = viewer
+            .getCamera()
+            .getRenderer()
+            .getCullVisitor();
         var root = new Node();
 
         // dreaded camera no modelview
@@ -51,7 +53,10 @@ module.exports = function() {
         viewer.setupManipulator();
         viewer.init();
         viewer.frame();
-        var cullVisitor = viewer.getCamera().getRenderer().getCullVisitor();
+        var cullVisitor = viewer
+            .getCamera()
+            .getRenderer()
+            .getCullVisitor();
         var root = new Node();
 
         // dreaded camera no modelview
@@ -90,7 +95,10 @@ module.exports = function() {
         viewer.setupManipulator();
         viewer.init();
         viewer.frame();
-        var cullVisitor = viewer.getCamera().getRenderer().getCullVisitor();
+        var cullVisitor = viewer
+            .getCamera()
+            .getRenderer()
+            .getCullVisitor();
         var root = new Node();
 
         // dreaded camera no modelview
@@ -132,7 +140,10 @@ module.exports = function() {
         viewer.setupManipulator();
         viewer.init();
         viewer.frame();
-        var cullVisitor = viewer.getCamera().getRenderer().getCullVisitor();
+        var cullVisitor = viewer
+            .getCamera()
+            .getRenderer()
+            .getCullVisitor();
         var root = new Node();
 
         // dreaded camera no modelview
@@ -161,7 +172,10 @@ module.exports = function() {
         viewer.advance();
         viewer._updateVisitor.setFrameStamp(viewer.getFrameStamp());
 
-        viewer.getCamera().getRenderer().cull();
+        viewer
+            .getCamera()
+            .getRenderer()
+            .cull();
 
         console.profile();
         console.time('time');
@@ -169,7 +183,10 @@ module.exports = function() {
 
         var nCount = 20;
         for (var n = 0; n < nCount; n++) {
-            viewer.getCamera().getRenderer().draw();
+            viewer
+                .getCamera()
+                .getRenderer()
+                .draw();
         }
 
         timed = Timer.instance().tick() - timed;
@@ -185,7 +202,10 @@ module.exports = function() {
         viewer.setupManipulator();
         viewer.init();
         viewer.frame();
-        var cullVisitor = viewer.getCamera().getRenderer().getCullVisitor();
+        var cullVisitor = viewer
+            .getCamera()
+            .getRenderer()
+            .getCullVisitor();
         var root = new Node();
 
         // dreaded camera no modelview
@@ -224,4 +244,4 @@ module.exports = function() {
 
         reportStats(result, 'perf Frame');
     });
-};
+}

@@ -1,10 +1,9 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var BufferArray = require('osg/BufferArray');
-var RigGeometry = require('osgAnimation/RigGeometry');
-var AnimationUpdateCallback = require('osgAnimation/AnimationUpdateCallback');
-var Target = require('osgAnimation/target');
-var MorphGeometry = require('osgAnimation/MorphGeometry');
+import utils from 'osg/utils';
+import BufferArray from 'osg/BufferArray';
+import RigGeometry from 'osgAnimation/RigGeometry';
+import AnimationUpdateCallback from 'osgAnimation/AnimationUpdateCallback';
+import Target from 'osgAnimation/target';
+import MorphGeometry from 'osgAnimation/MorphGeometry';
 
 var UpdateMorph = function() {
     AnimationUpdateCallback.call(this);
@@ -21,16 +20,14 @@ var UpdateMorph = function() {
     this._maxMorphGPU = -1;
 };
 
-var EFFECTIVE_EPS = MorphGeometry.EFFECTIVE_EPS; // in case we have more than 4 morphs, we can skip low effective weights
-
 // for sorting
 var funcWeights = function(a, b) {
     return Math.abs(b.value) - Math.abs(a.value);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     UpdateMorph,
-    MACROUTILS.objectInherit(AnimationUpdateCallback.prototype, {
+    utils.objectInherit(AnimationUpdateCallback.prototype, {
         init: function(node) {
             this._maxMorphGPU = MorphGeometry.MAX_MORPH_GPU;
             this._morphs.length = 0;
@@ -138,7 +135,7 @@ MACROUTILS.createPrototypeObject(
                 if (gpuMorphed[j] === true) continue;
 
                 var weight = targets[j].value;
-                if (Math.abs(weight) < EFFECTIVE_EPS) continue;
+                if (Math.abs(weight) <= MorphGeometry.EFFECTIVE_EPS) continue;
 
                 weight /= extraWeightSum;
 
@@ -166,7 +163,7 @@ MACROUTILS.createPrototypeObject(
                 if (gpuMorphed[i] === true) continue;
 
                 var weight = targets[i].value;
-                if (Math.abs(weight) < EFFECTIVE_EPS) continue;
+                if (Math.abs(weight) <= MorphGeometry.EFFECTIVE_EPS) continue;
 
                 sum += weight;
             }
@@ -247,7 +244,8 @@ MACROUTILS.createPrototypeObject(
             }
 
             // check more than 4 targets, we compute all the extra targets influence and merge in the last 4th morphs targets
-            var extraMorphCPU = Math.abs(sortedTargets[this._maxMorphGPU].value) >= EFFECTIVE_EPS;
+            var extraEpsilon = Math.abs(sortedTargets[this._maxMorphGPU].value);
+            var extraMorphCPU = extraEpsilon > MorphGeometry.EFFECTIVE_EPS;
             gpuMorphed[indexMap[this._maxMorphGPU - 1]] = !extraMorphCPU;
 
             this._remapBufferArrays();
@@ -278,4 +276,4 @@ MACROUTILS.createPrototypeObject(
     'UpdateMorph'
 );
 
-module.exports = UpdateMorph;
+export default UpdateMorph;

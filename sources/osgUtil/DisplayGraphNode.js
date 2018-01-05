@@ -1,7 +1,6 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var NodeVisitor = require('osg/NodeVisitor');
-var MorphGeometry = require('osgAnimation/MorphGeometry');
+import utils from 'osg/utils';
+import NodeVisitor from 'osg/NodeVisitor';
+import MorphGeometry from 'osgAnimation/MorphGeometry';
 
 var DisplayGraphNode = function(selectables) {
     NodeVisitor.call(this, NodeVisitor.TRAVERSE_ALL_CHILDREN);
@@ -15,9 +14,9 @@ var DisplayGraphNode = function(selectables) {
     this._uniqueEdges = new window.Set();
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     DisplayGraphNode,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         getColorFromClassName: function(name) {
             switch (name) {
                 case 'ShadowedScene':
@@ -206,4 +205,4 @@ MACROUTILS.createPrototypeObject(
     'DisplayGraphNode'
 );
 
-module.exports = DisplayGraphNode;
+export default DisplayGraphNode;

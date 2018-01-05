@@ -1,9 +1,8 @@
-'use strict';
-var assert = require('chai').assert;
-var mockup = require('tests/mockup/mockup');
-var Shape = require('osg/shape');
+import { assert } from 'chai';
+import mockup from 'tests/mockup/mockup';
+import Shape from 'osg/shape';
 
-module.exports = function() {
+export default function() {
     test('Viewer', function() {
         (function() {
             var canvas = mockup.createCanvas();
@@ -34,7 +33,10 @@ module.exports = function() {
             viewer.getCamera().getRenderer().draw = function() {}; // do nothing
             viewer.frame();
 
-            var cullvisitor = viewer.getCamera().getRenderer().getCullVisitor();
+            var cullvisitor = viewer
+                .getCamera()
+                .getRenderer()
+                .getCullVisitor();
             // with auto compute near far
             assert.approximately(cullvisitor._computedFar, 31.30036755335, 1e-5, 'check far');
             assert.approximately(cullvisitor._computedNear, 18.6996324495, 1e-5, 'check near');
@@ -114,4 +116,4 @@ module.exports = function() {
             assert.isOk(renderCount === 1, 'no render after context Lost');
         })();
     });
-};
+}

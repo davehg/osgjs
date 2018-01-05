@@ -3,17 +3,16 @@
 
     var OSG = window.OSG;
     var osg = OSG.osg;
+    var osgShader = OSG.osgShader;
     var osgUtil = OSG.osgUtil;
     var ExampleOSGJS = window.ExampleOSGJS;
 
     var composeFragmentShader = [
-        osgUtil.Composer.Filter.defaultFragmentShaderHeader,
-        'uniform sampler2D Texture1;',
-        'void main (void)',
+        'vec4 blend ()',
         '{',
-        '  vec4 transp = texture2D(Texture1, vTexCoord0 );',
-        '  vec4 opaque = texture2D(Texture0, vTexCoord0 );',
-        '  gl_FragColor = opaque * (1.0 - transp.a) + transp.rgba;',
+        '  vec4 transp = TEXTURE_2D_TextureTransparent( gTexCoord );',
+        '  vec4 opaque = TEXTURE_2D_TextureOpaque( gTexCoord );',
+        '  return opaque * (1.0 - transp.a) + transp.rgba;',
         '}'
     ].join('\n');
 
@@ -75,16 +74,12 @@
         },
 
         sortBinArray: function() {
-            var binsKeys = window.Object.keys(this._bins);
-            var bins = this._bins;
-
             var binsArray = this._binArraySorted;
             binsArray.length = 0;
 
-            for (var i = 0, l = binsKeys.length; i < l; i++) {
-                var k = binsKeys[i];
-                binsArray.push(bins[k]);
-            }
+            this._bins.forEach(function(key, bin) {
+                binsArray.push(bin);
+            });
 
             binsArray.sort(sortBin);
         },
@@ -239,15 +234,15 @@
             this.getCamera().frameBufferObjectTransparent = fbo;
         },
 
-        clearCameraColorDepth: function(gl) {
-            gl.clearColor(0.0, 0.0, 0.0, 0.0);
-            gl.depthMask(true);
-            gl.clearDepth(this.clearDepth);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        clearCameraColorDepth: function(state) {
+            state.clearColor(osg.vec4.ZERO);
+            state.depthMask(true);
+            state.clearDepth(this.getClearDepth());
+            state.clear(osg.Camera.COLOR_BUFFER_BIT | osg.Camera.DEPTH_BUFFER_BIT);
         },
 
-        clearCameraColor: function(gl) {
-            gl.clear(gl.COLOR_BUFFER_BIT);
+        clearCameraColor: function(state) {
+            state.clear(osg.Camera.COLOR_BUFFER_BIT);
         },
 
         drawImplementationEarlyZ: function(state, previousLeaf) {
@@ -282,26 +277,25 @@
                 );
             }
 
-            var gl = state.getGraphicContext();
-
             // check / init FBO
             var fbo = this.getCamera().frameBufferObject;
             if (!fbo) this.createCamera2RTT(state);
 
-            if (this.viewport === undefined) osg.log('RenderStage does not have a valid viewport');
+            if (this.getViewport() === undefined)
+                osg.log('RenderStage does not have a valid viewport');
 
-            state.applyAttribute(this.viewport);
+            state.applyAttribute(this.getViewport());
 
             // clear transparency
             this.useTransparencyRTT(state);
-            this.clearCameraColorDepth(gl);
+            this.clearCameraColorDepth(state);
 
             // clear opaque
             this.useOpaqueRTT(state);
-            this.clearCameraColor(gl);
+            this.clearCameraColor(state);
 
-            if (this.positionedAttribute.length !== 0) {
-                this.applyPositionedAttribute(state, this.positionedAttribute);
+            if (this._positionedAttribute.length !== 0) {
+                this.applyPositionedAttribute(state, this._positionedAttribute);
             }
 
             this.sortBinArray();
@@ -365,12 +359,12 @@
 
             // camera RTT
             var opaque = this.createTextureRTT(
-                'mainSceneOpaque',
+                'TextureOpaque',
                 osg.Texture.NEAREST,
                 osg.Texture.UNSIGNED_BYTE
             );
             var transparent = this.createTextureRTT(
-                'mainSceneTransparent',
+                'TextureTransparent',
                 osg.Texture.NEAREST,
                 osg.Texture.UNSIGNED_BYTE
             );
@@ -397,21 +391,30 @@
             scene.addChild(model0);
             scene.addChild(model1);
 
-            // create textured quad with the texture rtt
-            // var cameraScreen = this.createCamera( opaque );
-            // this._root.addChild( cameraScreen );
-
             // composer
-            var composer = new osgUtil.Composer();
-            var blendPass = new osgUtil.Composer.Filter.Custom(composeFragmentShader, {
-                Texture1: transparent,
-                Texture0: opaque
-            });
+            var composer = new osgUtil.ComposerPostProcess();
+            composer.setName('ComposerPostProcess');
+            var width = this._viewer.getCanvasWidth();
+            var height = this._viewer.getCanvasHeight();
+            composer.setScreenSize(width, height);
 
-            blendPass.getOrCreateStateSet().setTextureAttributeAndModes(1, transparent);
-            blendPass.getOrCreateStateSet().setTextureAttributeAndModes(0, opaque);
-            composer.addPass(blendPass);
-            composer.renderToScreen(this._canvas.width, this._canvas.height);
+            this._shaderProcessor = new osgShader.ShaderProcessor();
+            this._shaderProcessor.addShaders({ 'blend.glsl': composeFragmentShader });
+            composer.setShaderProcessor(this._shaderProcessor);
+
+            composer.addExternalTexture('TextureOpaque', opaque);
+            composer.addExternalTexture('TextureTransparent', transparent);
+
+            var passes = {
+                func: 'blend',
+                textures: [
+                    { name: 'TextureTransparent', filter: 'linear', texture: transparent },
+                    { name: 'TextureOpaque', filter: 'linear', texture: opaque }
+                ],
+                out: { name: '%next' }
+            };
+
+            composer.build(passes);
 
             this._root.addChild(composer);
 
@@ -427,7 +430,10 @@
             window.refreshDebugTextureList = refreshDebugTextureList;
 
             // hook RenderStage
-            this._viewer.getCamera().getRenderer().setRenderStage(new RenderStageSplitter());
+            this._viewer
+                .getCamera()
+                .getRenderer()
+                .setRenderStage(new RenderStageSplitter());
         }
     });
 

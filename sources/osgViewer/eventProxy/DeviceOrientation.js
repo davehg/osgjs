@@ -1,5 +1,3 @@
-'use strict';
-
 var DeviceOrientation = function(viewer) {
     this._viewer = viewer;
     this._type = 'DeviceOrientation';
@@ -54,7 +52,8 @@ DeviceOrientation.prototype = {
         var manipulator = this._viewer.getManipulator();
         if (!manipulator) return false;
 
-        if (!manipulator.getControllerList()[this._type]) return false;
+        var controller = manipulator.getControllerList()[this._type];
+        if (!controller || !controller.isEnabled()) return false;
 
         return true;
     },
@@ -70,4 +69,4 @@ DeviceOrientation.prototype = {
     }
 };
 
-module.exports = DeviceOrientation;
+export default DeviceOrientation;

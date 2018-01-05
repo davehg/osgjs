@@ -1,4 +1,4 @@
-var MACROUTILS = require('osg/Utils');
+import utils from 'osg/utils';
 var performance = window.performance;
 
 var Counter = function(config) {
@@ -19,7 +19,7 @@ var Counter = function(config) {
     this._display = false;
 };
 
-MACROUTILS.createPrototypeObject(Counter, {
+utils.createPrototypeObject(Counter, {
     isDisplayable: function() {
         return this._display;
     },
@@ -81,4 +81,4 @@ MACROUTILS.createPrototypeObject(Counter, {
     }
 });
 
-module.exports = Counter;
+export default Counter;

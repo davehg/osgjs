@@ -1,7 +1,6 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Node = require('osg/Node');
-var NodeVisitor = require('osg/NodeVisitor');
+import utils from 'osg/utils';
+import Node from 'osg/Node';
+import NodeVisitor from 'osg/NodeVisitor';
 
 /**
  *  Switch that can switch on and off separate children
@@ -14,9 +13,9 @@ var Switch = function() {
 };
 
 /** @lends Switch.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     Switch,
-    MACROUTILS.objectInherit(Node.prototype, {
+    utils.objectInherit(Node.prototype, {
         addChild: function(node, value) {
             Node.prototype.addChild.call(this, node);
 
@@ -86,4 +85,4 @@ MACROUTILS.createPrototypeNode(
     'Switch'
 );
 
-module.exports = Switch;
+export default Switch;

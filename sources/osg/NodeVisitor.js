@@ -1,5 +1,3 @@
-'use strict';
-
 var NodeVisitor = function(traversalMode) {
     /*jshint bitwise: false */
     this.traversalMask = ~0x0;
@@ -104,12 +102,6 @@ NodeVisitor.prototype = {
         return this.nodePath;
     },
 
-    pushOntoNodePath: function(node) {
-        NodeVisitor._pushOntoNodePath[this.traversalMode].call(this, node);
-    },
-    popFromNodePath: function() {
-        NodeVisitor._popFromNodePath[this.traversalMode].call(this);
-    },
     validNodeMask: function(node) {
         var nm = node.getNodeMask();
         /*jshint bitwise: false */
@@ -118,9 +110,6 @@ NodeVisitor.prototype = {
     },
     apply: function(node) {
         this.traverse(node);
-    },
-    traverse: function(node) {
-        NodeVisitor._traversalFunctions[this.traversalMode].call(this, node);
     },
     getVisitorType: function() {
         return this.visitorType;
@@ -133,4 +122,4 @@ NodeVisitor.prototype = {
     }
 };
 
-module.exports = NodeVisitor;
+export default NodeVisitor;

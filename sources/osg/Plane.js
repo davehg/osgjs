@@ -1,10 +1,9 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var vec4 = require('osg/glMatrix').vec4;
-var vec3 = require('osg/glMatrix').vec3;
+import utils from 'osg/utils';
+import { vec4 } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
 
 /** @class Plane Operations */
-var Plane = MACROUTILS.objectInherit(vec4, {
+var Plane = utils.objectInherit(vec4, {
     // Many case (frustum, convexity)
     // needs to know where from a plane it stands,
     // not just boolean intersection
@@ -124,4 +123,4 @@ var Plane = MACROUTILS.objectInherit(vec4, {
     }
 });
 
-module.exports = Plane;
+export default Plane;

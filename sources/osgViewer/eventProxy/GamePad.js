@@ -1,5 +1,4 @@
-'use strict';
-var Notify = require('osg/notify');
+import notify from 'osg/notify';
 
 var GamePad = function(viewer) {
     this._viewer = viewer;
@@ -25,8 +24,8 @@ GamePad.prototype = {
         var manipulator = this._viewer.getManipulator();
         if (!manipulator) return false;
 
-        var constrollerList = manipulator.getControllerList();
-        if (!constrollerList[this._type]) return false;
+        var controller = manipulator.getControllerList()[this._type];
+        if (!controller || !controller.isEnabled()) return false;
 
         return true;
     },
@@ -58,11 +57,11 @@ GamePad.prototype = {
     },
 
     onGamepadConnect: function(gamepad) {
-        Notify.log('Detected new gamepad!', gamepad);
+        notify.log('Detected new gamepad!', gamepad);
     },
 
     onGamepadDisconnect: function() {
-        Notify.log('Gamepad disconnected');
+        notify.log('Gamepad disconnected');
     },
 
     // Called in each frame
@@ -81,4 +80,4 @@ GamePad.prototype = {
         }
     }
 };
-module.exports = GamePad;
+export default GamePad;

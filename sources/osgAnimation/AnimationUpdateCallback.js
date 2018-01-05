@@ -1,8 +1,7 @@
-'use strict';
-var Notify = require('osg/notify');
-var MACROUTILS = require('osg/Utils');
-var Object = require('osg/Object');
-var MatrixTransform = require('osg/MatrixTransform');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
+import Object from 'osg/Object';
+import MatrixTransform from 'osg/MatrixTransform';
 
 /**
  *  AnimationUpdateCallback
@@ -29,14 +28,14 @@ AnimationUpdateCallback.checkPathIsAnimated = function(path) {
 };
 
 /** @lends AnimationUpdateCallback.prototype */
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     AnimationUpdateCallback,
-    MACROUTILS.objectInherit(Object.prototype, {
+    utils.objectInherit(Object.prototype, {
         linkChannel: function() {},
         linkAnimation: function(anim) {
             var name = this.getName();
             if (name.length === 0) {
-                Notify.log('no name on an update callback, discard');
+                notify.log('no name on an update callback, discard');
                 return 0;
             }
             var nbLinks = 0;
@@ -55,4 +54,4 @@ MACROUTILS.createPrototypeObject(
     'AnimationUpdateCallback'
 );
 
-module.exports = AnimationUpdateCallback;
+export default AnimationUpdateCallback;

@@ -1,10 +1,9 @@
-'use strict';
-var assert = require('chai').assert;
-var NodeVisitor = require('osg/NodeVisitor');
-var Node = require('osg/Node');
-var MACROUTILS = require('osg/Utils');
+import { assert } from 'chai';
+import NodeVisitor from 'osg/NodeVisitor';
+import Node from 'osg/Node';
+import utils from 'osg/utils';
 
-module.exports = function() {
+export default function() {
     test('NodeVisitor', function() {
         var FindItemAnchor = function(search) {
             NodeVisitor.call(this);
@@ -12,7 +11,7 @@ module.exports = function() {
             this.result = [];
         };
 
-        FindItemAnchor.prototype = MACROUTILS.objectInherit(NodeVisitor.prototype, {
+        FindItemAnchor.prototype = utils.objectInherit(NodeVisitor.prototype, {
             apply: function(node) {
                 if (node.getName !== undefined) {
                     var name = node.getName();
@@ -48,7 +47,7 @@ module.exports = function() {
                 NodeVisitor.call(this, NodeVisitor.TRAVERSE_PARENTS);
                 this.node = undefined;
             };
-            GetRootItem.prototype = MACROUTILS.objectInherit(NodeVisitor.prototype, {
+            GetRootItem.prototype = utils.objectInherit(NodeVisitor.prototype, {
                 apply: function(node) {
                     this.node = node;
                     this.traverse(node);
@@ -71,4 +70,4 @@ module.exports = function() {
             assert.isOk(visit.node.getName() === 'root', 'Should get the root node');
         })();
     });
-};
+}

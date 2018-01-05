@@ -1,7 +1,6 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
-var vec4 = require('osg/glMatrix').vec4;
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
+import { vec4 } from 'osg/glMatrix';
 
 /**
  *  Manage BlendColor attribute
@@ -21,9 +20,9 @@ var BlendColor = function(color) {
 /**
  * @lends BlendColor.prototype
  */
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     BlendColor,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'BlendColor',
         cloneType: function() {
             return new BlendColor();
@@ -53,4 +52,4 @@ MACROUTILS.createPrototypeStateAttribute(
     'BlendColor'
 );
 
-module.exports = BlendColor;
+export default BlendColor;

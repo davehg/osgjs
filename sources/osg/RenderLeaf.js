@@ -1,5 +1,4 @@
-'use strict';
-var StateGraph = require('osg/StateGraph');
+import StateGraph from 'osg/StateGraph';
 
 // just use inline function, it's faster than having the test in the code
 var applyUniformCache = [
@@ -124,8 +123,8 @@ RenderLeaf.prototype = {
             var prevRenderGraph;
             var prevRenderGraphParent;
             var curRenderGraph = this._parent;
-            var curRenderGraphParent = curRenderGraph.parent;
-            var curRenderGraphStateSet = curRenderGraph.stateset;
+            var curRenderGraphParent = curRenderGraph._parent;
+            var curRenderGraphStateSet = curRenderGraph._stateset;
 
             // When rendering a RenderLeaf we try to limit the state change
             // to do that Graph of State is created during the culling pass.
@@ -174,7 +173,7 @@ RenderLeaf.prototype = {
             if (previousLeaf !== undefined) {
                 // apply state if required.
                 prevRenderGraph = previousLeaf._parent;
-                prevRenderGraphParent = prevRenderGraph.parent;
+                prevRenderGraphParent = prevRenderGraph._parent;
 
                 if (prevRenderGraphParent !== curRenderGraphParent) {
                     // Case A
@@ -207,4 +206,4 @@ RenderLeaf.prototype = {
     })()
 };
 
-module.exports = RenderLeaf;
+export default RenderLeaf;

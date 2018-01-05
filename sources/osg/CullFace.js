@@ -1,6 +1,5 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
 
 /**
  *  Manage CullFace attribute
@@ -17,9 +16,9 @@ CullFace.BACK = 0x0405;
 CullFace.FRONT_AND_BACK = 0x0408;
 
 /** @lends CullFace.prototype */
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     CullFace,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'CullFace',
 
         cloneType: function() {
@@ -37,17 +36,11 @@ MACROUTILS.createPrototypeStateAttribute(
         },
 
         apply: function(state) {
-            var gl = state.getGraphicContext();
-            if (this._mode === CullFace.DISABLE) {
-                gl.disable(gl.CULL_FACE);
-            } else {
-                gl.enable(gl.CULL_FACE);
-                gl.cullFace(this._mode);
-            }
+            state.applyCullFace(this);
         }
     }),
     'osg',
     'CullFace'
 );
 
-module.exports = CullFace;
+export default CullFace;

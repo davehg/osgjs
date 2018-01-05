@@ -1,8 +1,6 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
-var Uniform = require('osg/Uniform');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
+import Uniform from 'osg/Uniform';
 
 /**
  * ShadowReceiveAttribute encapsulate Shadow Main State object
@@ -30,16 +28,19 @@ var ShadowReceiveAttribute = function(lightNum, disable) {
 
     this._fakePCF = true;
 
-    this._rotateOffset = false;
+    this._jitterOffset = 'none';
 
     this._enable = !disable;
     this._isAtlasTexture = false;
+
+    this._dirtyHash = true;
+    this._hash = '';
 };
 
 ShadowReceiveAttribute.uniforms = {};
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     ShadowReceiveAttribute,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'ShadowReceive',
 
         cloneType: function() {
@@ -82,16 +83,26 @@ MACROUTILS.createPrototypeStateAttribute(
             return this._normalBias;
         },
 
+        setJitterOffset: function(jitter) {
+            this._jitterOffset = jitter;
+        },
+
+        getJitterOffset: function() {
+            return this._jitterOffset;
+        },
+
         getKernelSizePCF: function() {
             return this._kernelSizePCF;
         },
 
         setKernelSizePCF: function(v) {
             this._kernelSizePCF = v;
+            this._dirtyHash = true;
         },
 
         setPrecision: function(precision) {
             this._precision = precision;
+            this._dirtyHash = true;
         },
 
         getPrecision: function() {
@@ -100,6 +111,7 @@ MACROUTILS.createPrototypeStateAttribute(
 
         setLightNumber: function(lightNum) {
             this._lightNumber = lightNum;
+            this._dirtyHash = true;
         },
 
         getOrCreateUniforms: function() {
@@ -143,6 +155,7 @@ MACROUTILS.createPrototypeStateAttribute(
             if (this.getPrecision() !== 'UNSIGNED_BYTE') defines.push('#define _FLOATTEX');
             if (this.getAtlas()) defines.push('#define _ATLAS_SHADOW');
             if (this.getNormalBias()) defines.push('#define _NORMAL_OFFSET');
+            if (this.getJitterOffset() !== 'none') defines.push('#define _JITTER_OFFSET');
 
             return defines;
         },
@@ -163,10 +176,14 @@ MACROUTILS.createPrototypeStateAttribute(
         },
 
         getHash: function() {
-            return this._computeHash();
+            if (!this._dirtyHash) return this._hash;
+
+            this._hash = this._computeInternalHash();
+            this._dirtyHash = false;
+            return this._hash;
         },
 
-        _computeHash: function() {
+        _computeInternalHash: function() {
             return this.getTypeMember() + '_' + this.getKernelSizePCF();
         }
     }),
@@ -174,4 +191,4 @@ MACROUTILS.createPrototypeStateAttribute(
     'ShadowReceiveAttribute'
 );
 
-module.exports = ShadowReceiveAttribute;
+export default ShadowReceiveAttribute;

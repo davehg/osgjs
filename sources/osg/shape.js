@@ -1,13 +1,12 @@
-'use strict';
-var vec3 = require('osg/glMatrix').vec3;
-var BufferArray = require('osg/BufferArray');
-var Geometry = require('osg/Geometry');
-var primitiveSet = require('osg/primitiveSet');
-var DrawArrays = require('osg/DrawArrays');
-var DrawElements = require('osg/DrawElements');
-var Program = require('osg/Program');
-var Shader = require('osg/Shader');
-var MACROUTILS = require('osg/Utils');
+import { vec3 } from 'osg/glMatrix';
+import BufferArray from 'osg/BufferArray';
+import Geometry from 'osg/Geometry';
+import primitiveSet from 'osg/primitiveSet';
+import DrawArrays from 'osg/DrawArrays';
+import DrawElements from 'osg/DrawElements';
+import Program from 'osg/Program';
+import Shader from 'osg/Shader';
+import utils from 'osg/utils';
 
 /**
  * Create a Textured Box on the given center with given size
@@ -28,9 +27,9 @@ var createTexturedBoxGeometry = function(cx, cy, cz, sx, sy, sz) {
     dy = sizey / 2.0;
     dz = sizez / 2.0;
 
-    var vertexes = new MACROUTILS.Float32Array(72);
-    var uv = new MACROUTILS.Float32Array(48);
-    var normal = new MACROUTILS.Float32Array(72);
+    var vertexes = new utils.Float32Array(72);
+    var uv = new utils.Float32Array(48);
+    var normal = new utils.Float32Array(72);
 
     // -ve y plane
     vertexes[0] = centerx - dx;
@@ -256,7 +255,7 @@ var createTexturedBoxGeometry = function(cx, cy, cz, sx, sy, sz) {
     uv[46] = 1.0;
     uv[47] = 1.0;
 
-    var indexes = new MACROUTILS.Uint16Array(36);
+    var indexes = new utils.Uint16Array(36);
     indexes[0] = 0;
     indexes[1] = 1;
     indexes[2] = 2;
@@ -319,22 +318,13 @@ var createTexturedBoxGeometry = function(cx, cy, cz, sx, sy, sz) {
 var createTexturedFullScreenFakeQuadGeometry = (function() {
     var g = new Geometry();
 
-    var uvs = new MACROUTILS.Float32Array([-1.0, -1.0, -1.0, 4.0, 4.0, -1.0]);
-    var vertexes = new MACROUTILS.Float32Array([-1.0, -1.0, -1.0, 4.0, 4.0, -1.0]);
+    var vertexes = new utils.Float32Array([4.0, -1.0, -1.0, 4.0, -1.0, -1.0]);
+    var buffer = new BufferArray(BufferArray.ARRAY_BUFFER, vertexes, 2);
+    // Further optim: (uv.xy = position.xy in vertex shader)
+    g.getAttributes().Vertex = buffer;
+    g.getAttributes().TexCoord0 = buffer;
 
-    var indexes = new MACROUTILS.Uint16Array(3);
-    indexes[0] = 2;
-    indexes[1] = 1;
-    indexes[2] = 0;
-
-    // Further optim: no index, no uv (uv.xy = position.xy in vertex shader)
-    g.getAttributes().Vertex = new BufferArray(BufferArray.ARRAY_BUFFER, vertexes, 2);
-    g.getAttributes().TexCoord0 = new BufferArray(BufferArray.ARRAY_BUFFER, uvs, 2);
-
-    var primitive = new DrawElements(
-        primitiveSet.TRIANGLES,
-        new BufferArray(BufferArray.ELEMENT_ARRAY_BUFFER, indexes, 1)
-    );
+    var primitive = new DrawArrays(primitiveSet.TRIANGLES, 0, 3);
     g.getPrimitives().push(primitive);
 
     return function() {
@@ -366,7 +356,7 @@ var createTexturedQuadGeometry = function(
 
     var g = new Geometry();
 
-    var vertexes = new MACROUTILS.Float32Array(12);
+    var vertexes = new utils.Float32Array(12);
     vertexes[0] = cornerx + hx;
     vertexes[1] = cornery + hy;
     vertexes[2] = cornerz + hz;
@@ -390,7 +380,7 @@ var createTexturedQuadGeometry = function(
         t = 1.0;
     }
 
-    var uvs = new MACROUTILS.Float32Array(8);
+    var uvs = new utils.Float32Array(8);
     uvs[0] = l;
     uvs[1] = t;
 
@@ -407,7 +397,7 @@ var createTexturedQuadGeometry = function(
     vec3.cross(n, n, vec3.fromValues(hx, hy, hz));
     vec3.normalize(n, n);
 
-    var normal = new MACROUTILS.Float32Array(12);
+    var normal = new utils.Float32Array(12);
     normal[0] = n[0];
     normal[1] = n[1];
     normal[2] = n[2];
@@ -424,7 +414,7 @@ var createTexturedQuadGeometry = function(
     normal[10] = n[1];
     normal[11] = n[2];
 
-    var indexes = new MACROUTILS.Uint16Array(6);
+    var indexes = new utils.Uint16Array(6);
     indexes[0] = 0;
     indexes[1] = 1;
     indexes[2] = 2;
@@ -491,12 +481,12 @@ var createAxisGeometry = function(size) {
 
     var g = new Geometry();
 
-    var vertexes = new MACROUTILS.Float32Array(18);
+    var vertexes = new utils.Float32Array(18);
     vertexes[3] = size;
     vertexes[10] = size;
     vertexes[17] = size;
 
-    var colors = new MACROUTILS.Float32Array(24);
+    var colors = new utils.Float32Array(24);
     //red color
     colors[0] = colors[3] = 1.0;
     colors[4] = colors[4 + 3] = 1.0;
@@ -544,27 +534,25 @@ var createTexturedSphere = function(
 
     var useDrawArrays = segmentsX * segmentsY / 3 >= 65536;
     var nbPrim = useDrawArrays ? segmentsX * segmentsY * 6 : segmentsX * segmentsY * 4;
-    var fullVerticesList = new MACROUTILS.Float32Array(nbPrim * 3);
-    var fullNormalsList = new MACROUTILS.Float32Array(nbPrim * 3);
-    var fullUVList = new MACROUTILS.Float32Array(nbPrim * 2);
-    var indexes = !useDrawArrays
-        ? new MACROUTILS.Uint16Array(segmentsX * segmentsY * 6)
-        : undefined;
+    var fullVerticesList = new utils.Float32Array(nbPrim * 3);
+    var fullNormalsList = new utils.Float32Array(nbPrim * 3);
+    var fullUVList = new utils.Float32Array(nbPrim * 2);
+    var indexes = !useDrawArrays ? new utils.Uint16Array(segmentsX * segmentsY * 6) : undefined;
     var vtxCount = 0;
     var triCount = 0;
 
-    var v1 = new MACROUTILS.Float32Array(3);
-    var v2 = new MACROUTILS.Float32Array(3);
-    var v3 = new MACROUTILS.Float32Array(3);
-    var v4 = new MACROUTILS.Float32Array(3);
-    var n1 = new MACROUTILS.Float32Array(3);
-    var n2 = new MACROUTILS.Float32Array(3);
-    var n3 = new MACROUTILS.Float32Array(3);
-    var n4 = new MACROUTILS.Float32Array(3);
-    var uv1 = new MACROUTILS.Float32Array(2);
-    var uv2 = new MACROUTILS.Float32Array(2);
-    var uv3 = new MACROUTILS.Float32Array(2);
-    var uv4 = new MACROUTILS.Float32Array(2);
+    var v1 = new utils.Float32Array(3);
+    var v2 = new utils.Float32Array(3);
+    var v3 = new utils.Float32Array(3);
+    var v4 = new utils.Float32Array(3);
+    var n1 = new utils.Float32Array(3);
+    var n2 = new utils.Float32Array(3);
+    var n3 = new utils.Float32Array(3);
+    var n4 = new utils.Float32Array(3);
+    var uv1 = new utils.Float32Array(2);
+    var uv2 = new utils.Float32Array(2);
+    var uv3 = new utils.Float32Array(2);
+    var uv4 = new utils.Float32Array(2);
     var getCoordAndUvSphere = function(u, v, coord, norm, uv) {
         coord[0] =
             -radius * Math.cos(phiStart + u * phiLength) * Math.sin(thetaStart + v * thetaLength);
@@ -783,7 +771,7 @@ var createBoundingBoxGeometry = function(col) {
 
     // use color or red
     if (!col) col = [1.0, 0.0, 0.0, 1.0];
-    var colors = new MACROUTILS.Float32Array(8 * 4);
+    var colors = new utils.Float32Array(8 * 4);
     for (var i = 0; i < 8; i++) {
         for (var k = 0; k < 4; k++) {
             colors[i * 3 + k] = col[k];
@@ -792,7 +780,7 @@ var createBoundingBoxGeometry = function(col) {
 
     g.getAttributes().Color = new BufferArray(BufferArray.ARRAY_BUFFER, colors, 4);
 
-    var indexes = new MACROUTILS.Uint16Array([
+    var indexes = new utils.Uint16Array([
         //up
         0,
         1,
@@ -834,7 +822,7 @@ var createBoundingBoxGeometry = function(col) {
     return g;
 };
 
-module.exports = {
+export default {
     createTexturedBoxGeometry: createTexturedBoxGeometry,
     createTexturedQuadGeometry: createTexturedQuadGeometry,
     createTexturedSphereGeometry: createTexturedSphere,

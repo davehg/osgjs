@@ -1,23 +1,22 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var NodeVisitor = require('osg/NodeVisitor');
-var Notify = require('osg/notify');
-var Bone = require('osgAnimation/Bone');
+import utils from 'osg/utils';
+import NodeVisitor from 'osg/NodeVisitor';
+import notify from 'osg/notify';
+import Bone from 'osgAnimation/Bone';
 
 var CollectBoneVisitor = function() {
     NodeVisitor.call(this, NodeVisitor.TRAVERSE_ALL_CHILDREN);
     this._boneMap = {};
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     CollectBoneVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             if (node.typeID === Bone.typeID) {
                 var name = node.getName();
 
                 if (!name) {
-                    Notify.warn('found Bone without name');
+                    notify.warn('found Bone without name');
                 } else {
                     this._boneMap[name] = node;
                 }
@@ -34,4 +33,4 @@ MACROUTILS.createPrototypeObject(
     'CollectBoneVisitor'
 );
 
-module.exports = CollectBoneVisitor;
+export default CollectBoneVisitor;

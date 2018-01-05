@@ -1,18 +1,17 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var MatrixTransform = require('osg/MatrixTransform');
-var UpdateSkeleton = require('osgAnimation/UpdateSkeleton');
-var NodeVisitor = require('osg/NodeVisitor');
-var UpdateMatrixTransform = require('osgAnimation/UpdateMatrixTransform');
-var Bone = require('osgAnimation/Bone');
+import utils from 'osg/utils';
+import MatrixTransform from 'osg/MatrixTransform';
+import UpdateSkeleton from 'osgAnimation/UpdateSkeleton';
+import NodeVisitor from 'osg/NodeVisitor';
+import UpdateMatrixTransform from 'osgAnimation/UpdateMatrixTransform';
+import Bone from 'osgAnimation/Bone';
 
 var ResetRestPoseVisitor = function() {
     NodeVisitor.call(this, NodeVisitor.TRAVERSE_ALL_CHILDREN);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ResetRestPoseVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             if (node.getTypeID() === Bone.getTypeID()) {
                 var cb = node.getUpdateCallback();
@@ -38,9 +37,9 @@ var Skeleton = function() {
     MatrixTransform.call(this);
 };
 
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     Skeleton,
-    MACROUTILS.objectInherit(MatrixTransform.prototype, {
+    utils.objectInherit(MatrixTransform.prototype, {
         setDefaultUpdateCallback: function() {
             this.addUpdateCallback(new UpdateSkeleton());
         },
@@ -53,4 +52,4 @@ MACROUTILS.createPrototypeNode(
     'Skeleton'
 );
 
-module.exports = Skeleton;
+export default Skeleton;

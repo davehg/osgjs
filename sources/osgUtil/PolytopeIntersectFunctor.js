@@ -1,9 +1,7 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var vec3 = require('osg/glMatrix').vec3;
-var Plane = require('osg/Plane');
-var IntersectFunctor = require('osgUtil/IntersectFunctor');
+import utils from 'osg/utils';
+import { vec3 } from 'osg/glMatrix';
+import Plane from 'osg/Plane';
+import IntersectFunctor from 'osgUtil/IntersectFunctor';
 
 var PolytopeIntersection = function() {
     IntersectFunctor.Intersection.call(this);
@@ -23,9 +21,9 @@ var PolytopeIntersectFunctor = function() {
     this._maxNumIntersectionsPoints = 6;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     PolytopeIntersectFunctor,
-    MACROUTILS.objectInherit(IntersectFunctor.prototype, {
+    utils.objectInherit(IntersectFunctor.prototype, {
         reset: function() {
             IntersectFunctor.prototype.reset.call(this);
             this._src = [];
@@ -45,22 +43,7 @@ MACROUTILS.createPrototypeObject(
         },
 
         addIntersection: function() {
-            var uniq = function(a) {
-                var seen = {};
-                var out = [];
-                var len = a.length;
-                var j = 0;
-                for (var i = 0; i < len; i++) {
-                    var item = a[i];
-                    if (seen[item] !== 1) {
-                        seen[item] = 1;
-                        out[j++] = item;
-                    }
-                }
-                return out;
-            };
-
-            this._src = uniq(this._src);
+            this._src = utils.arrayUniq(this._src);
             var src = this._src;
 
             var center = vec3.create();
@@ -104,9 +87,9 @@ MACROUTILS.createPrototypeObject(
 
                 this._dest = [];
                 var plane = planeList[i];
-                var vPrevious = this._src[1];
+                var vPrevious = this._src[0];
                 var dPrevious = Plane.distanceToPlane(plane, vPrevious);
-                for (var j = 0; j < this._src.length; ++j) {
+                for (var j = 1; j < this._src.length; ++j) {
                     var vCurrent = this._src[j];
                     var dCurrent = Plane.distanceToPlane(plane, vCurrent);
                     if (dPrevious >= 0.0) {
@@ -156,7 +139,7 @@ MACROUTILS.createPrototypeObject(
             this._src = [];
             this._src[0] = v0;
             this._src[1] = v1;
-
+            this._src[2] = v0;
             return this.contains();
         },
 
@@ -166,6 +149,7 @@ MACROUTILS.createPrototypeObject(
             this._src[0] = v0;
             this._src[1] = v1;
             this._src[2] = v2;
+            this._src[3] = v0;
             return this.contains();
         },
 
@@ -185,4 +169,4 @@ MACROUTILS.createPrototypeObject(
     'PolytopeIntersectFunctor'
 );
 
-module.exports = PolytopeIntersectFunctor;
+export default PolytopeIntersectFunctor;

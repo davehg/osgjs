@@ -1,10 +1,10 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Node = require('osg/Node');
-var WebGLCaps = require('osg/WebGLCaps');
-var DrawElements = require('osg/DrawElements');
-var BufferArrayProxy = require('osg/BufferArrayProxy');
-
+import utils from 'osg/utils';
+import notify from 'osg/notify';
+import Node from 'osg/Node';
+import WebGLCaps from 'osg/WebGLCaps';
+import DrawElements from 'osg/DrawElements';
+import BufferArrayProxy from 'osg/BufferArrayProxy';
+import VertexArrayObject from 'osg/VertexArrayObject';
 /**
  * Geometry manage array and primitives to draw a geometry.
  * @class Geometry
@@ -35,9 +35,9 @@ var Geometry = function() {
 Geometry.enableVAO = true;
 
 /** @lends Geometry.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     Geometry,
-    MACROUTILS.objectInherit(Node.prototype, {
+    utils.objectInherit(Node.prototype, {
         releaseGLObjects: function() {
             if (this.stateset !== undefined) this.stateset.releaseGLObjects();
 
@@ -63,7 +63,7 @@ MACROUTILS.createPrototypeNode(
 
             for (var prgID in this._vao) {
                 if (this._vao[prgID]) {
-                    this._glContext.deleteVertexArray(this._vao[prgID]);
+                    this._vao[prgID].releaseGLObjects();
                     this._vao[prgID] = undefined;
                 }
             }
@@ -97,22 +97,22 @@ MACROUTILS.createPrototypeNode(
         },
 
         /**
-     * Return the primitiveset list
-     * If you modify something inside this array
-     * you must call dirty() on the Geometry
-     */
+         * Return the primitiveset list
+         * If you modify something inside this array
+         * you must call dirty() on the Geometry
+         */
         getPrimitiveSetList: function() {
             return this._primitives;
         },
 
         /**
-     * Set the buffer array on the attribute name key
-     * key is often something like Vertex, Normal, Color, ...
-     * for classic geometry
-     *
-     * if you change a buffer a dirty will be automatically
-     * called to rebuild the VAO if needed.
-     */
+         * Set the buffer array on the attribute name key
+         * key is often something like Vertex, Normal, Color, ...
+         * for classic geometry
+         *
+         * if you change a buffer a dirty will be automatically
+         * called to rebuild the VAO if needed.
+         */
         setVertexAttribArray: function(key, array) {
             if (this._attributes[key] !== array) {
                 this._attributes[key] = array;
@@ -158,14 +158,13 @@ MACROUTILS.createPrototypeNode(
             return vertexAttributeSetup;
         },
 
-        _generatePrimitive: function(primitives, hasVertexColor, optimizeVAO) {
+        _generatePrimitives: function(validPrimitives, hasVertexColor, optimizeVAO) {
             var primitiveSetup = [
                 hasVertexColor ? 'state.enableVertexColor();' : 'state.disableVertexColor();'
             ];
-
             if (optimizeVAO) {
                 return primitiveSetup.concat([
-                    'var primitive = this._primitives[ 0 ];',
+                    'var primitive = this._primitives[ ' + validPrimitives[0] + ' ];',
                     'var indexes = primitive.getIndices();',
                     'if ( indexes.isDirty() ) {;',
                     '  indexes.bind( gl );',
@@ -176,21 +175,22 @@ MACROUTILS.createPrototypeNode(
             }
 
             primitiveSetup.push('var primitives = this._primitives;');
-            for (var j = 0, m = primitives.length; j < m; j++)
-                primitiveSetup.push('primitives[' + j + '].draw(state);');
+            for (var j = 0, m = validPrimitives.length; j < m; j++) {
+                primitiveSetup.push('primitives[' + validPrimitives[j] + '].draw(state);');
+            }
 
             return primitiveSetup;
         },
 
         /**
-     *  Generate a function specific to the Geometry/Program
-     *  two version one using VAO and a regular one
-     */
+         *  Generate a function specific to the Geometry/Program
+         *  two version one using VAO and a regular one
+         */
         generateDrawCommand: (function() {
             var validAttributeList = [];
             var validAttributeKeyList = [];
 
-            return function(state, program, prgID) {
+            return function(state, program, prgID, validPrimitives) {
                 var attributesCacheMap = program._attributesCache;
                 var geometryVertexAttributes = this.getVertexAttributeList();
 
@@ -242,8 +242,8 @@ MACROUTILS.createPrototypeNode(
                     // if there is only one drawElement we can put the index buffer
                     // in the vao
                     var optimizeIndexBufferVAO =
-                        this._primitives.length === 1 &&
-                        this._primitives[0] instanceof DrawElements;
+                        validPrimitives.length === 1 &&
+                        this._primitives[validPrimitives[0]] instanceof DrawElements;
 
                     var vertexAttributeSetup = this._generateVertexSetup(
                         validAttributeKeyList,
@@ -254,7 +254,8 @@ MACROUTILS.createPrototypeNode(
                     state.clearVertexAttribCache();
 
                     var gl = state.getGraphicContext();
-                    var vao = gl.createVertexArray();
+                    var vao = new VertexArrayObject(gl);
+                    vao.create(gl);
                     state.setVertexArrayObject(vao);
                     this._vao[prgID] = vao;
 
@@ -284,8 +285,8 @@ MACROUTILS.createPrototypeNode(
 
                     autogeneratedFunction = vaoSetup
                         .concat(
-                            this._generatePrimitive(
-                                this._primitives,
+                            this._generatePrimitives(
+                                validPrimitives,
                                 hasVertexColor,
                                 optimizeIndexBufferVAO
                             )
@@ -298,7 +299,7 @@ MACROUTILS.createPrototypeNode(
                         validAttributeList,
                         false
                     )
-                        .concat(this._generatePrimitive(this._primitives, hasVertexColor, false))
+                        .concat(this._generatePrimitives(validPrimitives, hasVertexColor, false))
                         .join('\n');
                     functionName = 'GeometryDrawImplementationCache';
                 }
@@ -317,30 +318,71 @@ MACROUTILS.createPrototypeNode(
             };
         })(),
 
+        _getValidPrimitives: function() {
+            var validPrimitives = [];
+
+            for (var i = 0; i < this._primitives.length; i++) {
+                var primitive = this._primitives[i];
+                if (!primitive.getCount()) {
+                    if (!this._warnInvalidPrimitives) {
+                        notify.warn(
+                            'geometry with instanceID ' +
+                                this._instanceID +
+                                ' has invalid primitives'
+                        );
+                        this._warnInvalidPrimitives = true;
+                    }
+                    continue;
+                }
+                validPrimitives.push(i);
+            }
+
+            return validPrimitives;
+        },
+
         drawImplementation: function(state) {
             var program = state.getLastProgramApplied();
             var prgID = program.getInstanceID();
 
+            state.drawGeometry(this);
             var cachedDraw = this._cacheDrawCall[prgID];
 
-            if (this._useVAO && !this._vao[prgID]) state.setVertexArrayObject(null);
+            if (!this._vao[prgID]) {
+                state.setVertexArrayObject(null);
+            } else {
+                if (this._vao[prgID].isDirty()) {
+                    // need vertex array recreation
+                    // ie: lost context
+                    cachedDraw = undefined;
+                }
+            }
 
             if (cachedDraw) {
                 cachedDraw.call(this, state);
                 return;
             }
 
+            if (!this._primitives.length) {
+                if (!this._warnNoPrimitives) {
+                    notify.warn(
+                        'geometry with instanceID ' + this._instanceID + ' has no primitives'
+                    );
+                    this._warnNoPrimitives = true;
+                }
+                return;
+            }
+
+            var validPrimitives = this._getValidPrimitives();
+            if (!validPrimitives.length) return;
+
             // generate cachedDraw
-
-            if (!this._primitives.length) return;
-
             if (this._useVAO === undefined && Geometry.enableVAO) {
                 // will be null if not supported
                 this._useVAO = WebGLCaps.instance().hasVAO();
                 this._glContext = state.getGraphicContext();
             }
 
-            cachedDraw = this.generateDrawCommand(state, program, prgID);
+            cachedDraw = this.generateDrawCommand(state, program, prgID, validPrimitives);
             cachedDraw.call(this, state);
             state.setVertexArrayObject(null);
         },
@@ -415,4 +457,4 @@ Geometry.appendVertexAttributeToList = function(from, to, postfix) {
     }
 };
 
-module.exports = Geometry;
+export default Geometry;

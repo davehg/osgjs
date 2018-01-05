@@ -1,9 +1,7 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var vec3 = require('osg/glMatrix').vec3;
-var mat4 = require('osg/glMatrix').mat4;
-var IntersectFunctor = require('osgUtil/IntersectFunctor');
+import utils from 'osg/utils';
+import { vec3 } from 'osg/glMatrix';
+import { mat4 } from 'osg/glMatrix';
+import IntersectFunctor from 'osgUtil/IntersectFunctor';
 
 var LineSegmentIntersection = function() {
     IntersectFunctor.Intersection.call(this);
@@ -38,9 +36,9 @@ var LineSegmentIntersectFunctor = function() {
     this._hit = false;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     LineSegmentIntersectFunctor,
-    MACROUTILS.objectInherit(IntersectFunctor.prototype, {
+    utils.objectInherit(IntersectFunctor.prototype, {
         set: function(start, end, threshold) {
             this._start = start;
             this._end = end;
@@ -370,4 +368,4 @@ MACROUTILS.createPrototypeObject(
     'LineSegmentIntersectFunctor'
 );
 
-module.exports = LineSegmentIntersectFunctor;
+export default LineSegmentIntersectFunctor;

@@ -1,9 +1,8 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Object = require('osg/Object');
-var mat4 = require('osg/glMatrix').mat4;
-var quat = require('osg/glMatrix').quat;
-var Target = require('osgAnimation/target');
+import utils from 'osg/utils';
+import Object from 'osg/Object';
+import { mat4 } from 'osg/glMatrix';
+import { quat } from 'osg/glMatrix';
+import Target from 'osgAnimation/target';
 
 var qIdentity = quat.create();
 
@@ -13,9 +12,9 @@ var StackedQuaternion = function(name, q) {
     if (name) this.setName(name);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     StackedQuaternion,
-    MACROUTILS.objectInherit(Object.prototype, {
+    utils.objectInherit(Object.prototype, {
         init: function(q) {
             this.setQuaternion(q);
             quat.copy(this._target.defaultValue, q);
@@ -47,4 +46,4 @@ MACROUTILS.createPrototypeObject(
     'StackedQuaternion'
 );
 
-module.exports = StackedQuaternion;
+export default StackedQuaternion;

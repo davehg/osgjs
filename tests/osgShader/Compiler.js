@@ -1,13 +1,12 @@
-'use strict';
-var assert = require('chai').assert;
-var Light = require('osg/Light');
-var Material = require('osg/Material');
-var Compiler = require('osgShader/Compiler');
-var nodeFactory = require('osgShader/nodeFactory');
-var ShadowReceiveAttribute = require('osgShadow/ShadowReceiveAttribute');
-var ShadowTexture = require('osgShadow/ShadowTexture');
+import { assert } from 'chai';
+import Light from 'osg/Light';
+import Material from 'osg/Material';
+import Compiler from 'osgShader/Compiler';
+import nodeFactory from 'osgShader/nodeFactory';
+import ShadowReceiveAttribute from 'osgShadow/ShadowReceiveAttribute';
+import ShadowTexture from 'osgShadow/ShadowTexture';
 
-module.exports = function() {
+export default function() {
     test('Compiler', function() {
         (function() {
             var light = new Light(1);
@@ -21,6 +20,7 @@ module.exports = function() {
                 [[shadowTexture]]
             );
 
+            compiler._fragmentShaderMode = true;
             var root = compiler.createFragmentShaderGraph();
 
             var extensions = compiler.evaluateAndGatherField(root, 'getExtensions');
@@ -90,4 +90,4 @@ module.exports = function() {
             );
         })();
     });
-};
+}

@@ -1,7 +1,6 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var NodeVisitor = require('osg/NodeVisitor');
-var AnimationUpdateCallback = require('osgAnimation/AnimationUpdateCallback');
+import utils from 'osg/utils';
+import NodeVisitor from 'osg/NodeVisitor';
+import AnimationUpdateCallback from 'osgAnimation/AnimationUpdateCallback';
 
 // search into a subgraph all target
 var CollectAnimationUpdateCallbackVisitor = function() {
@@ -9,9 +8,9 @@ var CollectAnimationUpdateCallbackVisitor = function() {
     this._animationUpdateCallback = {};
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     CollectAnimationUpdateCallbackVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         getAnimationUpdateCallbackMap: function() {
             return this._animationUpdateCallback;
         },
@@ -34,4 +33,4 @@ MACROUTILS.createPrototypeObject(
     'CollectAnimationUpdateCallbackVisitor'
 );
 
-module.exports = CollectAnimationUpdateCallbackVisitor;
+export default CollectAnimationUpdateCallbackVisitor;

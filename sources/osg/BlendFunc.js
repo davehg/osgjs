@@ -1,6 +1,5 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
 
 /**
  *  Manage Blending mode
@@ -53,17 +52,17 @@ BlendFunc.ONE_MINUS_CONSTANT_ALPHA = 0x8004;
 BlendFunc.BLEND_COLOR = 0x8005;
 
 /** @lends BlendFunc.prototype */
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     BlendFunc,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         /**
-  StateAttribute type of BlendFunc
-  @type String
-   */
+         * StateAttribute type of BlendFunc
+         * @type String
+         */
         attributeType: 'BlendFunc',
         /**
-    Create an instance of this StateAttribute
-    */
+         * Create an instance of this StateAttribute
+         */
         cloneType: function() /**BlendFunc*/ {
             return new BlendFunc();
         },
@@ -136,33 +135,15 @@ MACROUTILS.createPrototypeStateAttribute(
         },
 
         /**
-      Apply the mode, must be called in the draw traversal
-      @param state
-  */
+         * Apply the mode, must be called in the draw traversal
+         * @param state
+         */
         apply: function(state) {
-            var gl = state.getGraphicContext();
-            if (
-                this._sourceFactor === BlendFunc.DISABLE ||
-                this._destinationFactor === BlendFunc.DISABLE
-            ) {
-                gl.disable(gl.BLEND);
-            } else {
-                gl.enable(gl.BLEND);
-                if (this._separate) {
-                    gl.blendFuncSeparate(
-                        this._sourceFactor,
-                        this._destinationFactor,
-                        this._sourceFactorAlpha,
-                        this._destinationFactorAlpha
-                    );
-                } else {
-                    gl.blendFunc(this._sourceFactor, this._destinationFactor);
-                }
-            }
+            state.applyBlendFunc(this);
         }
     }),
     'osg',
     'BlendFunc'
 );
 
-module.exports = BlendFunc;
+export default BlendFunc;

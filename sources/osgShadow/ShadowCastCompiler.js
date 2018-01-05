@@ -1,6 +1,5 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Compiler = require('osgShader/Compiler');
+import utils from 'osg/utils';
+import Compiler from 'osgShader/Compiler';
 
 var CompilerShadowCast = function() {
     Compiler.apply(this, arguments);
@@ -11,9 +10,9 @@ config.attribute = ['ShadowCast', 'Morph', 'Skinning', 'PointSize'];
 
 Compiler.setStateAttributeConfig(CompilerShadowCast, config);
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     CompilerShadowCast,
-    MACROUTILS.objectInherit(Compiler.prototype, {
+    utils.objectInherit(Compiler.prototype, {
         getCompilerName: function() {
             return 'ShadowCast';
         },
@@ -44,14 +43,14 @@ MACROUTILS.createPrototypeObject(
         createShadowCastDepth: function(out) {
             var defines = this._shadowCastAttribute.getDefines();
 
-            this.getNode('ShadowCast')
+            var node = this.getNode('ShadowCast')
                 .inputs({
                     shadowDepthRange: this.getOrCreateUniform('vec4', 'uShadowDepthRange'),
-                    fragEye: this.getOrCreateVarying('vec4', 'vViewVertex')
+                    fragEye: this.getOrCreateViewVertex()
                 })
-                .outputs({
-                    result: out
-                }).getDefines = function() {
+                .outputs({ result: out });
+
+            node.getDefines = function() {
                 return defines;
             };
 
@@ -69,4 +68,4 @@ MACROUTILS.createPrototypeObject(
     'CompilerShadowCast'
 );
 
-module.exports = CompilerShadowCast;
+export default CompilerShadowCast;

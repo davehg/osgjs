@@ -1,12 +1,11 @@
-'use strict';
-var assert = require('chai').assert;
-var DatabasePager = require('osgDB/DatabasePager');
-var PagedLOD = require('osg/PagedLOD');
-var Node = require('osg/Node');
-var FrameStamp = require('osg/FrameStamp');
-var Notify = require('osg/notify');
+import { assert } from 'chai';
+import DatabasePager from 'osgDB/DatabasePager';
+import PagedLOD from 'osg/PagedLOD';
+import Node from 'osg/Node';
+import FrameStamp from 'osg/FrameStamp';
+import notify from 'osg/notify';
 
-module.exports = function() {
+export default function() {
     var dbpager = new DatabasePager();
     // Modify the processRequest
     dbpager.processRequest = function(dbrequest) {
@@ -14,7 +13,7 @@ module.exports = function() {
         var that = this;
         // Check if the request is valid;
         if (dbrequest._groupExpired) {
-            //Notify.log( 'DatabasePager::processRequest() Request expired.' );
+            //notify.log( 'DatabasePager::processRequest() Request expired.' );
             that._downloadingRequestsNumber--;
             this._loading = false;
             return undefined;
@@ -59,7 +58,7 @@ module.exports = function() {
                 assert.isOk(dbpager._pendingNodes.length === 1, 'Request processed');
             })
             .catch(function(error) {
-                Notify.error(error);
+                notify.error(error);
             });
     });
 
@@ -86,7 +85,7 @@ module.exports = function() {
                 );
             })
             .catch(function(error) {
-                Notify.error(error);
+                notify.error(error);
             });
     });
 
@@ -121,7 +120,7 @@ module.exports = function() {
                 );
             })
             .catch(function(error) {
-                Notify.error(error);
+                notify.error(error);
             });
     });
-};
+}

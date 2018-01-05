@@ -1,8 +1,7 @@
-'use strict';
-var Notify = require('osg/notify');
-var shaderLib = require('osgShader/shaderLib');
-var shadowShaderLib = require('osgShadow/shaderLib');
-var WebglCaps = require('osg/WebGLCaps');
+import notify from 'osg/notify';
+import shaderLib from 'osgShader/shaderLib';
+import shadowShaderLib from 'osgShadow/shaderLib';
+import WebglCaps from 'osg/WebGLCaps';
 
 // webgl2 protected variable names : sample, texture
 
@@ -70,11 +69,16 @@ ShaderProcessor.prototype = {
         return '\n#line ' + 0 + ' ' + sourceID + '\n' + content;
     },
 
+    hasShader: function(shaderName) {
+        // unlike getShaderTextPure, doesn't log an erreur if the shader doesn't exist
+        return this._shadersText[shaderName] !== undefined;
+    },
+
     getShaderTextPure: function(shaderName) {
         var preShader = this._shadersText[shaderName];
 
         if (!preShader) {
-            Notify.error('shader file/text: ' + shaderName + ' not registered');
+            notify.error('shader file/text: ' + shaderName + ' not registered');
             preShader = '';
         }
 
@@ -272,4 +276,4 @@ ShaderProcessor.prototype = {
         return strVersion + strExtensions + strPrecision + strDefines + strCore;
     }
 };
-module.exports = ShaderProcessor;
+export default ShaderProcessor;

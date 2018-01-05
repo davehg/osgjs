@@ -1,11 +1,9 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var notify = require('osg/notify');
-var Program = require('osg/Program');
-var Shader = require('osg/Shader');
-var Compiler = require('osgShader/Compiler');
-var ShaderProcessor = require('osgShader/ShaderProcessor');
-
+import utils from 'osg/utils';
+import notify from 'osg/notify';
+import Program from 'osg/Program';
+import Shader from 'osg/Shader';
+import Compiler from 'osgShader/Compiler';
+import ShaderProcessor from 'osgShader/ShaderProcessor';
 var ShaderGenerator = function() {
     this._cache = {};
 
@@ -56,7 +54,7 @@ ShaderGenerator.prototype = {
 
         for (var j = 0, k = cacheType.length; j < k; j++) {
             var type = cacheType[j];
-            var attributeStack = _attributeArray[type];
+            var attributeStack = type < _attributeArray.length ? _attributeArray[type] : undefined;
             if (!attributeStack) continue;
 
             var attribute = attributeStack._lastApplied;
@@ -77,7 +75,8 @@ ShaderGenerator.prototype = {
         var cacheType = this._ShaderCompiler._validAttributeTypeMemberCache;
         for (var i = 0, l = cacheType.length; i < l; i++) {
             var type = cacheType[i];
-            var attributeStack = state._attributeArray[type];
+            var attributeStack =
+                type < state._attributeArray.length ? state._attributeArray[type] : undefined;
             if (attributeStack) {
                 var attribute = attributeStack._lastApplied;
                 if (!attribute || this.filterAttributeTypes(attribute)) continue;
@@ -99,9 +98,10 @@ ShaderGenerator.prototype = {
             var textureUnit = textureUnitList[j];
             if (!textureUnit) continue;
 
+            var textureUnitLength = textureUnit.length;
             for (var i = 0; i < cacheType.length; i++) {
                 var type = cacheType[i];
-                var attributeStack = textureUnit[type];
+                var attributeStack = type < textureUnitLength ? textureUnit[type] : undefined;
                 if (attributeStack) {
                     var attribute = attributeStack._lastApplied;
 
@@ -139,7 +139,8 @@ ShaderGenerator.prototype = {
             for (var j = 0, m = cacheType.length; j < m; j++) {
                 var type = cacheType[j];
 
-                var attributeStack = _attributeArrayForUnit[type];
+                var attributeStack =
+                    type < _attributeArrayForUnit.length ? _attributeArrayForUnit[type] : undefined;
                 if (!attributeStack) continue;
 
                 var attribute = attributeStack._lastApplied;
@@ -197,7 +198,7 @@ ShaderGenerator.prototype = {
         var id;
         for (i = 0, il = typeMemberNames.length; i < il; i++) {
             typeMemberName = typeMemberNames[i];
-            id = MACROUTILS.getIdFromTypeMember(typeMemberName);
+            id = utils.getIdFromTypeMember(typeMemberName);
             if (id !== undefined) {
                 if (validTypeMemberList.indexOf(id) !== -1) {
                     notify.warn(
@@ -219,7 +220,7 @@ ShaderGenerator.prototype = {
         validTypeMemberList = [];
         for (i = 0, il = typeMemberNames.length; i < il; i++) {
             typeMemberName = typeMemberNames[i];
-            id = MACROUTILS.getTextureIdFromTypeMember(typeMemberName);
+            id = utils.getTextureIdFromTypeMember(typeMemberName);
             if (validTypeMemberList.indexOf(id) !== -1) {
                 notify.warn(
                     'Compiler ' +
@@ -237,8 +238,6 @@ ShaderGenerator.prototype = {
     },
 
     getOrCreateProgram: (function() {
-        // TODO: double check GC impact of this stack
-        // TODO: find a way to get a hash dirty/cache on stateAttribute
         var textureAttributes = [];
         var attributes = [];
 
@@ -298,7 +297,12 @@ ShaderGenerator.prototype = {
             this._cache[hash] = program;
             return program;
         };
-    })()
+    })(),
+
+    resetCache: function(){
+        this._cache = {};
+    }
+
 };
 
-module.exports = ShaderGenerator;
+export default ShaderGenerator;

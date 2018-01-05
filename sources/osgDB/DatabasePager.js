@@ -1,9 +1,8 @@
-'use strict';
-var P = require('bluebird');
-var MACROUTILS = require('osg/Utils');
-var NodeVisitor = require('osg/NodeVisitor');
-var PagedLOD = require('osg/PagedLOD');
-var Timer = require('osg/Timer');
+import P from 'bluebird';
+import utils from 'osg/utils';
+import NodeVisitor from 'osg/NodeVisitor';
+import PagedLOD from 'osg/PagedLOD';
+import Timer from 'osg/Timer';
 
 var FindPagedLODsVisitor = function() {
     NodeVisitor.call(this, NodeVisitor.TRAVERSE_ALL_CHILDREN);
@@ -11,9 +10,9 @@ var FindPagedLODsVisitor = function() {
     this._frameNumber = 0;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     FindPagedLODsVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             if (node.getTypeID() === PagedLOD.getTypeID()) {
                 node.setFrameNumberOfLastTraversal(this._frameNumber);
@@ -34,9 +33,9 @@ var ReleaseVisitor = function() {
     NodeVisitor.call(this, NodeVisitor.TRAVERSE_ALL_CHILDREN);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ReleaseVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             // mark GLResources in nodes to be released
             node.releaseGLObjects();
@@ -52,9 +51,9 @@ var ExpiredPagedLODVisitor = function() {
     this._childrenList = [];
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ExpiredPagedLODVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             if (node.getTypeID() === PagedLOD.getTypeID()) {
                 this._childrenList.push(node);
@@ -151,7 +150,7 @@ var DatabaseRequest = function() {
     this._priority = 0.0;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     DatabasePager,
     {
         setTargetMaximumNumberOfPageLOD: function(target) {
@@ -352,7 +351,7 @@ MACROUTILS.createPrototypeObject(
         },
 
         loadNodeFromURL: function(url) {
-            var ReaderParser = require('osgDB/readerParser');
+            var ReaderParser = require('osgDB/readerParser').default;
             // Call to ReaderParser just in case there is a custom readNodeURL Callback
             // See osgDB/options.js and/or osgDB/Input.js
             // TODO: We should study if performance can be improved if separating the XHTTP request from
@@ -445,4 +444,4 @@ MACROUTILS.createPrototypeObject(
     'DatabasePager'
 );
 
-module.exports = DatabasePager;
+export default DatabasePager;

@@ -1,15 +1,17 @@
-'use strict';
-var assert = require('chai').assert;
-var P = require('bluebird');
-var Input = require('osgDB/Input');
-var mockup = require('tests/mockup/mockup');
-if (mockup.isNodeContext()) {
-    Input = require('tests/mockup/InputMockup');
-}
-var Notify = require('osg/notify');
-var Image = require('osg/Image');
+import { assert } from 'chai';
+import P from 'bluebird';
+import mockup from 'tests/mockup/mockup';
+import notify from 'osg/notify';
+import Image from 'osg/Image';
 
-module.exports = function() {
+var Input;
+if (mockup.isNodeContext()) {
+    Input = require('tests/mockup/InputMockup').default;
+} else {
+    Input = require('osgDB/Input').default;
+}
+
+export default function() {
     var ImageTest = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 
     test('Input.readImageURL', function(done) {
@@ -22,7 +24,7 @@ module.exports = function() {
                 done();
             })
             .catch(function(error) {
-                Notify.error(error);
+                notify.error(error);
             });
     });
 
@@ -37,14 +39,12 @@ module.exports = function() {
             .readImageURL(ImageTest, {
                 readImageURL: readImageURLReplacement
             })
-            .then(
-                function(/*image*/) {
-                    assert.equal(called, true, 'check image src');
-                    done();
-                }
-            )
+            .then(function(/*image*/) {
+                assert.equal(called, true, 'check image src');
+                done();
+            })
             .catch(function(error) {
-                Notify.error(error);
+                notify.error(error);
             });
     });
 
@@ -67,7 +67,7 @@ module.exports = function() {
                 done();
             })
             .catch(function(error) {
-                Notify.error(error);
+                notify.error(error);
             });
     });
 
@@ -105,15 +105,13 @@ module.exports = function() {
         var input = new Input(ba);
         input
             .readBufferArray()
-            .then(
-                function(/*value*/) {
-                    return input
-                        .setJSON({
-                            UniqueID: 10
-                        })
-                        .readBufferArray();
-                }
-            )
+            .then(function(/*value*/) {
+                return input
+                    .setJSON({
+                        UniqueID: 10
+                    })
+                    .readBufferArray();
+            })
             .then(function(o2) {
                 assert.isOk(o2.getElements()[2] === 3.0, 'readBufferArray check same unique id');
                 done();
@@ -131,16 +129,10 @@ module.exports = function() {
             .readBinaryArrayURL('toto', {
                 readBinaryArrayURL: readBinaryArrayURL
             })
-            .then(
-                function(/*value*/) {
-                    assert.isOk(
-                        calledBinaryArray,
-                        true,
-                        'readBinaryArray replacement has been called'
-                    );
-                    done();
-                }
-            );
+            .then(function(/*value*/) {
+                assert.isOk(calledBinaryArray, true, 'readBinaryArray replacement has been called');
+                done();
+            });
     });
 
     test('Input.readNodeURL with replacement option', function(done) {
@@ -154,12 +146,10 @@ module.exports = function() {
             .readNodeURL('toto', {
                 readNodeURL: readNodeURL
             })
-            .then(
-                function(/*value*/) {
-                    assert.isOk(calledNodeURL, true, 'readNodeURL replacement has been called');
-                    done();
-                }
-            );
+            .then(function(/*value*/) {
+                assert.isOk(calledNodeURL, true, 'readNodeURL replacement has been called');
+                done();
+            });
     });
 
     test('Input.getObjectWrapper', function() {
@@ -233,17 +223,15 @@ module.exports = function() {
         });
         input
             .readPrimitiveSet()
-            .then(
-                function(/*value */) {
-                    return input
-                        .setJSON({
-                            DrawArrays: {
-                                UniqueID: 10
-                            }
-                        })
-                        .readPrimitiveSet();
-                }
-            )
+            .then(function(/*value */) {
+                return input
+                    .setJSON({
+                        DrawArrays: {
+                            UniqueID: 10
+                        }
+                    })
+                    .readPrimitiveSet();
+            })
             .then(function(o2) {
                 assert.isOk(o2.getCount() === 3540, 'readPrimitiveSet check same unique id');
                 done();
@@ -312,12 +300,10 @@ module.exports = function() {
             };
             var input = new Input(ba);
             input.setProgressXHRCallback(progress);
-            return input.readBufferArray().then(
-                function(/*buffer*/) {
-                    assert.isOk(calledProgress === true, 'readBufferArray check progress callback');
-                    return P.resolve();
-                }
-            );
+            return input.readBufferArray().then(function(/*buffer*/) {
+                assert.isOk(calledProgress === true, 'readBufferArray check progress callback');
+                return P.resolve();
+            });
         })();
 
         P.all([a, b]).then(function() {
@@ -410,4 +396,4 @@ module.exports = function() {
             });
         })();
     });
-};
+}

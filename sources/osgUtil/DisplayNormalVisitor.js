@@ -1,19 +1,18 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var NodeVisitor = require('osg/NodeVisitor');
-var Geometry = require('osg/Geometry');
-var BufferArray = require('osg/BufferArray');
-var DrawArrays = require('osg/DrawArrays');
-var primitiveSet = require('osg/primitiveSet');
-var StateSet = require('osg/StateSet');
-var Uniform = require('osg/Uniform');
-var Depth = require('osg/Depth');
-var vec3 = require('osg/glMatrix').vec3;
-var ShaderGenerator = require('osgShader/ShaderGenerator');
-var Compiler = require('osgShader/Compiler');
-var RigGeometry = require('osgAnimation/RigGeometry');
-var MorphGeometry = require('osgAnimation/MorphGeometry');
-var UpdateMorph = require('osgAnimation/UpdateMorph');
+import utils from 'osg/utils';
+import NodeVisitor from 'osg/NodeVisitor';
+import Geometry from 'osg/Geometry';
+import BufferArray from 'osg/BufferArray';
+import DrawArrays from 'osg/DrawArrays';
+import primitiveSet from 'osg/primitiveSet';
+import StateSet from 'osg/StateSet';
+import Uniform from 'osg/Uniform';
+import Depth from 'osg/Depth';
+import { vec3 } from 'osg/glMatrix';
+import ShaderGenerator from 'osgShader/ShaderGenerator';
+import Compiler from 'osgShader/Compiler';
+import RigGeometry from 'osgAnimation/RigGeometry';
+import MorphGeometry from 'osgAnimation/MorphGeometry';
+import UpdateMorph from 'osgAnimation/UpdateMorph';
 
 ////////////////////////
 // COMPILER OFFSET NORMAL
@@ -27,9 +26,9 @@ configNormal.textureAttribute = [];
 
 Compiler.setStateAttributeConfig(CompilerOffsetNormal, configNormal);
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     CompilerOffsetNormal,
-    MACROUTILS.objectInherit(Compiler.prototype, {
+    utils.objectInherit(Compiler.prototype, {
         getCompilerName: function() {
             return 'CompilerOffsetNormal';
         },
@@ -98,9 +97,9 @@ var ShaderGeneratorCompilerOffsetNormal = function() {
     ShaderGenerator.apply(this, arguments);
     this.setShaderCompiler(CompilerOffsetNormal);
 };
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ShaderGeneratorCompilerOffsetNormal,
-    MACROUTILS.objectInherit(ShaderGenerator.prototype, {}),
+    utils.objectInherit(ShaderGenerator.prototype, {}),
     'osgUtil',
     'ShaderGeneratorCompilerOffsetNormal'
 );
@@ -115,9 +114,9 @@ var CompilerOffsetTangent = function() {
 var configTangent = configNormal;
 Compiler.setStateAttributeConfig(CompilerOffsetTangent, configTangent);
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     CompilerOffsetTangent,
-    MACROUTILS.objectInherit(CompilerOffsetNormal.prototype, {
+    utils.objectInherit(CompilerOffsetNormal.prototype, {
         getCompilerName: function() {
             return 'CompilerOffsetTangent';
         },
@@ -134,9 +133,9 @@ var ShaderGeneratorCompilerOffsetTangent = function() {
     this.setShaderCompiler(CompilerOffsetTangent);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ShaderGeneratorCompilerOffsetTangent,
-    MACROUTILS.objectInherit(ShaderGenerator.prototype, {}),
+    utils.objectInherit(ShaderGenerator.prototype, {}),
     'osgUtil',
     'ShaderGeneratorCompilerOffsetTangent'
 );
@@ -168,9 +167,9 @@ DisplayNormalVisitor.CompilerOffsetTangent = CompilerOffsetTangent;
 DisplayNormalVisitor.ShaderGeneratorCompilerOffsetNormal = ShaderGeneratorCompilerOffsetNormal;
 DisplayNormalVisitor.ShaderGeneratorCompilerOffsetTangent = ShaderGeneratorCompilerOffsetTangent;
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     DisplayNormalVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         setScale: function(scale) {
             this._unifScale.setFloat(scale);
         },
@@ -181,22 +180,24 @@ MACROUTILS.createPrototypeObject(
             this._normalStateSet.setAttributeAndModes(new Depth(bool ? Depth.LESS : Depth.NEVER));
         },
         apply: function(node) {
-            var list = node.getUpdateCallbackList();
-            // dirty the UpdateMorph so that they detect the normal/tangent geometry and update the target/weights correctly
-            for (var i = 0, nbCB = list.length; i < nbCB; ++i) {
-                if (list[i] instanceof UpdateMorph) {
-                    list[i]._isInitialized = false;
-                }
-            }
-
             if (node._isVisitedNormalDebug) return;
-
             node._isVisitedNormalDebug = true;
 
-            if (node instanceof Geometry === false) return this.traverse(node);
+            if (node instanceof Geometry) {
+                this._createDebugGeom(node, 'Normal', this._normalStateSet);
+                this._createDebugGeom(node, 'Tangent', this._tangentStateSet);
+                return;
+            }
 
-            this._createDebugGeom(node, 'Normal', this._normalStateSet);
-            this._createDebugGeom(node, 'Tangent', this._tangentStateSet);
+            this.traverse(node);
+
+            var list = node.getUpdateCallbackList();
+            // reference the new morph geometry on the UpdateMorph callbacks
+            for (var i = 0, nbCB = list.length; i < nbCB; ++i) {
+                if (list[i] instanceof UpdateMorph) {
+                    list[i].init(node);
+                }
+            }
         },
         _createDoubleOffsetArray: function(nbVertices) {
             // 0 means original vertex pos
@@ -315,4 +316,4 @@ MACROUTILS.createPrototypeObject(
     'DisplayNormalVisitor'
 );
 
-module.exports = DisplayNormalVisitor;
+export default DisplayNormalVisitor;

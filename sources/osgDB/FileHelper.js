@@ -1,10 +1,9 @@
-'use strict';
-var P = require('bluebird');
+import P from 'bluebird';
 
-var ReaderParser = require('osgDB/readerParser');
-var Registry = require('osgDB/Registry');
-var requestFile = require('osgDB/requestFile.js');
-var Notify = require('osg/notify');
+import ReaderParser from 'osgDB/readerParser';
+import Registry from 'osgDB/Registry';
+import requestFile from 'osgDB/requestFile.js';
+import notify from 'osg/notify';
 
 // Drag'n Drop file helper
 // it also holds a list of basic types per extension to do requests.
@@ -66,7 +65,7 @@ var FileHelper = {
     addTypeForExtension: function(type, extension) {
         if (!FileHelper._typesMap) FileHelper.init();
         if (FileHelper._typesMap.get(extension) !== undefined) {
-            Notify.warn("the '" + extension + "' already has a type");
+            notify.warn("the '" + extension + "' already has a type");
         }
         FileHelper._typesMap.set(extension, type);
     },
@@ -79,4 +78,4 @@ var FileHelper = {
     }
 };
 
-module.exports = FileHelper;
+export default FileHelper;

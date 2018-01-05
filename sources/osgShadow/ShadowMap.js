@@ -1,29 +1,28 @@
-'use strict';
-var Camera = require('osg/Camera');
-var CullVisitor = require('osg/CullVisitor');
-var BlendFunc = require('osg/BlendFunc');
-var Depth = require('osg/Depth');
-var FrameBufferObject = require('osg/FrameBufferObject');
-var mat4 = require('osg/glMatrix').mat4;
-var MatrixTransform = require('osg/MatrixTransform');
-var Notify = require('osg/notify');
-var Shape = require('osg/shape');
-var StateAttribute = require('osg/StateAttribute');
-var StateSet = require('osg/StateSet');
-var Debug = require('osgUtil/debug');
-var Texture = require('osg/Texture');
-var Transform = require('osg/Transform');
-var Uniform = require('osg/Uniform');
-var MACROUTILS = require('osg/Utils');
-var primitiveSet = require('osg/primitiveSet');
-var vec3 = require('osg/glMatrix').vec3;
-var vec4 = require('osg/glMatrix').vec4;
-var Viewport = require('osg/Viewport');
-var WebGLCaps = require('osg/WebGLCaps');
-var ShadowReceiveAttribute = require('osgShadow/ShadowReceiveAttribute');
-var ShadowCastAttribute = require('osgShadow/ShadowCastAttribute');
-var ShadowTechnique = require('osgShadow/ShadowTechnique');
-var ShadowTexture = require('osgShadow/ShadowTexture');
+import Camera from 'osg/Camera';
+import CullVisitor from 'osg/CullVisitor';
+import BlendFunc from 'osg/BlendFunc';
+import Depth from 'osg/Depth';
+import FrameBufferObject from 'osg/FrameBufferObject';
+import { mat4 } from 'osg/glMatrix';
+import MatrixTransform from 'osg/MatrixTransform';
+import notify from 'osg/notify';
+import Shape from 'osg/shape';
+import StateAttribute from 'osg/StateAttribute';
+import StateSet from 'osg/StateSet';
+import Debug from 'osgUtil/debug';
+import Texture from 'osg/Texture';
+import Transform from 'osg/Transform';
+import Uniform from 'osg/Uniform';
+import utils from 'osg/utils';
+import primitiveSet from 'osg/primitiveSet';
+import { vec2, vec3, vec4 } from 'osg/glMatrix';
+import Viewport from 'osg/Viewport';
+import WebGLCaps from 'osg/WebGLCaps';
+import ShadowReceiveAttribute from 'osgShadow/ShadowReceiveAttribute';
+import ShadowCastAttribute from 'osgShadow/ShadowCastAttribute';
+import ShadowTechnique from 'osgShadow/ShadowTechnique';
+import ShadowTexture from 'osgShadow/ShadowTexture';
+import Scissor from 'osg/Scissor';
 
 // Custom camera cull callback
 // we customize it just to avoid to add extra 'virtual' function
@@ -32,7 +31,7 @@ var CameraCullCallback = function(shadowTechnique) {
     this._shadowTechnique = shadowTechnique;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     CameraCullCallback,
     {
         cull: function(node, nv) {
@@ -43,6 +42,11 @@ MACROUTILS.createPrototypeObject(
             var near = nv.getComputedNear(),
                 far = nv.getComputedFar();
 
+            if (near === Infinity && far === -Infinity) {
+                this._shadowTechnique.markSceneAsNoShadow();
+                return false;
+            }
+
             mat4.getFrustumPlanes(
                 cs.getFrustum().getPlanes(),
                 m,
@@ -50,7 +54,6 @@ MACROUTILS.createPrototypeObject(
                 false
             );
             cs.getFrustum().setupMask(6);
-
             this._shadowTechnique.setLightFrustum(cs.getFrustum(), near, far);
 
             return false;
@@ -68,6 +71,7 @@ var ShadowMap = function(settings, shadowTexture) {
     ShadowTechnique.call(this);
 
     this._projectionMatrix = mat4.create();
+    this._projection = vec3.create();
     this._viewMatrix = mat4.create();
     this._lightNumberArrayIndex = -1;
     this._lightUp = vec3.fromValues(0.0, 0.0, 1.0);
@@ -135,8 +139,6 @@ var ShadowMap = function(settings, shadowTexture) {
     this._depthRange = unifRange.getInternalArray();
     this._depthRange[0] = near;
     this._depthRange[1] = far;
-    this._depthRange[2] = far - near;
-    this._depthRange[3] = 1.0 / (far - near);
 
     this._worldLightPos = vec4.create();
     this._worldLightPos[3] = 0;
@@ -172,9 +174,9 @@ var ShadowMap = function(settings, shadowTexture) {
 };
 
 /** @lends ShadowMap.prototype */
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ShadowMap,
-    MACROUTILS.objectInherit(ShadowTechnique.prototype, {
+    utils.objectInherit(ShadowTechnique.prototype, {
         getDepthRange: function() {
             return this._depthRange;
         },
@@ -253,13 +255,22 @@ MACROUTILS.createPrototypeObject(
             this._shadowReceiveAttribute.setNormalBias(value);
         },
 
+        getJitterOffset: function() {
+            return this._shadowReceiveAttribute.getJitterOffset();
+        },
+
+        setJitterOffset: function(value) {
+            this._shadowReceiveAttribute.setJitterOffset(value);
+        },
+
         getBias: function() {
             return this._shadowReceiveAttribute.getBias();
         },
 
         setBias: function(value) {
             this._shadowReceiveAttribute.setBias(value);
-            this._casterStateSet.getUniformList()['bias'].getUniform().setFloat(value);
+            var uniform = this._casterStateSet.getUniformList().bias.getUniform();
+            uniform.setFloat(value);
         },
 
         getKernelSizePCF: function() {
@@ -295,7 +306,7 @@ MACROUTILS.createPrototypeObject(
             }
 
             /*develblock:start*/
-            Notify.assert(
+            notify.assert(
                 this._shadowReceiveAttribute.getTypeMember() ===
                     this._shadowReceiveAttribute.attributeType + lightNumber,
                 'TypeMember isnt reflecting light number' +
@@ -325,7 +336,7 @@ MACROUTILS.createPrototypeObject(
         init: function(atlasTexture, lightIndex, textureUnit) {
             if (!this._shadowedScene) return;
 
-            this._filledOnce = false;
+            this._needRedraw = true;
 
             this.checkLightNumber();
 
@@ -434,6 +445,17 @@ MACROUTILS.createPrototypeObject(
                 }
 
                 if (viewportDimension) {
+                    var scissor = camera.getScissor();
+                    if (!scissor) {
+                        scissor = new Scissor(
+                            viewportDimension[0],
+                            viewportDimension[1],
+                            viewportDimension[2],
+                            viewportDimension[3]
+                        );
+                        camera.setScissor(scissor);
+                    }
+
                     // if texture size changed update the camera rtt params
                     if (
                         vp.x() !== viewportDimension[0] ||
@@ -443,6 +465,13 @@ MACROUTILS.createPrototypeObject(
                     ) {
                         camera.setFrameBufferObject(frameBufferObject);
                         vp.setViewport(
+                            viewportDimension[0],
+                            viewportDimension[1],
+                            viewportDimension[2],
+                            viewportDimension[3]
+                        );
+
+                        scissor.setScissor(
                             viewportDimension[0],
                             viewportDimension[1],
                             viewportDimension[2],
@@ -466,7 +495,7 @@ MACROUTILS.createPrototypeObject(
         },
 
         updateShadowTechnic: function(/*nv*/) {
-            Notify.log(
+            notify.log(
                 'ShadowMap.updateShadowTechnic() is deprecated, use updateShadowTechnique instead'
             );
             this.updateShadowTechnique();
@@ -609,15 +638,7 @@ MACROUTILS.createPrototypeObject(
             var distance = vec3.distance(center, eyePos);
             // inside or not have influence
             // on using radius for fov
-            if (distance < -radius) {
-                // won't render anything the object  is behind..
-                this._emptyCasterScene = true;
-            } else if (distance <= 0.0) {
-                // shhh.. we're inside !
-                // sphere center is behind
-                zNear = epsilon;
-                zFar = distance + radius;
-            } else if (distance < radius) {
+            if (distance <= radius) {
                 // shhh.. we're inside !
                 // sphere center is in front
                 zNear = epsilon;
@@ -664,6 +685,10 @@ MACROUTILS.createPrototypeObject(
                 );
             }
 
+            this._projection[0] = this._projectionMatrix[0];
+            this._projection[1] = this._projectionMatrix[5];
+            this._projection[2] = 0.0;
+
             mat4.lookAtDirection(view, eyePos, eyeDir, up);
         },
 
@@ -696,6 +721,10 @@ MACROUTILS.createPrototypeObject(
             top = radius;
             right = top;
             mat4.ortho(projection, -right, right, -top, top, zNear, zFar);
+
+            this._projection[0] = right;
+            this._projection[1] = top;
+            this._projection[2] = 1.0;
 
             this._depthRange[0] = zNear;
             this._depthRange[1] = zFar;
@@ -734,15 +763,19 @@ MACROUTILS.createPrototypeObject(
             var positionedAttribute = cullVisitor.getCurrentRenderBin().getPositionedAttribute();
 
             var lightMatrix;
-            positionedAttribute.find(function(element) {
-                if (element.length > 0 && element[1] === light) {
-                    lightMatrix = element[0];
-                    return true;
+            var positionedAttributeElements = positionedAttribute.getArray();
+            for (var i = 0; i < positionedAttribute.getLength(); i++) {
+                var pa = positionedAttributeElements[i];
+                var attribute = pa[1];
+                var matrix = pa[0];
+                if (attribute === light) {
+                    lightMatrix = matrix;
+                    break;
                 }
-                return false;
-            });
+            }
+
             if (lightMatrix === undefined) {
-                Notify.warn('light isnt inside children of shadowedScene Node');
+                notify.warn('light isnt inside children of shadowedScene Node');
                 this._emptyCasterScene = true;
                 return;
             }
@@ -817,44 +850,37 @@ MACROUTILS.createPrototypeObject(
             mat4.copy(camera.getProjectionMatrix(), this._projectionMatrix);
             mat4.copy(camera.getViewMatrix(), this._viewMatrix);
 
-            this.setShadowUniformsDepthValue(false);
+            this.setShadowUniformsReceive(false);
         },
 
-        setShadowUniformsDepthValue: function(noDepth) {
+        setShadowUniformsReceive: function(noDepth) {
             if (noDepth) {
-                vec4.set(this._depthRange, 0.0, 0.0, 0.0, 0.0);
-            } else {
-                // set values now
-                this._depthRange[2] = this._depthRange[1] - this._depthRange[0];
-                this._depthRange[3] = 1.0 / this._depthRange[2];
+                // receiver shader can read and early out
+                vec2.set(this._depthRange, 0.0, 0.0);
             }
-
+            // even if noDepth, need to call those to make sure they are created
+            // in shadowTexture / shadowTextureAtlas
             if (this._lightNumberArrayIndex !== -1) {
                 var lightNumber = this._light.getLightNumber();
                 this._texture.setViewMatrix(lightNumber, this._viewMatrix);
-                this._texture.setProjectionMatrix(lightNumber, this._projectionMatrix);
+                this._texture.setProjection(lightNumber, this._projection);
                 this._texture.setDepthRange(lightNumber, this._depthRange);
             } else {
                 this._texture.setViewMatrix(this._viewMatrix);
-                this._texture.setProjectionMatrix(this._projectionMatrix);
+                this._texture.setProjection(this._projection);
                 this._texture.setDepthRange(this._depthRange);
             }
         },
 
-        noDraw: function() {
-            var castUniforms = this._casterStateSet.getUniformList();
-            castUniforms.uShadowDepthRange.getUniform().setVec4(this._depthRange);
-
-            var camera = this._cameraShadow;
-
-            // make sure it's not modified outside our computations
-            // camera matrix can be modified by cullvisitor afterwards...
-            mat4.copy(this._projectionMatrix, camera.getProjectionMatrix());
-            mat4.copy(this._viewMatrix, camera.getViewMatrix());
-
-            this.setShadowUniformsDepthValue(true);
-
-            this._filledOnce = true;
+        // we know the scene is empty so we don't draw it
+        // but we still camera clear it.
+        // but we want to mark the uniform so that receiver shader can do
+        // an early out.
+        // ie: in shader, no texfetch
+        markSceneAsNoShadow: function() {
+            this.setShadowUniformsReceive(true);
+            // we still clear the shadow so we filled it
+            this._needRedraw = false;
         },
 
         // Defines the frustum from light param.
@@ -874,8 +900,10 @@ MACROUTILS.createPrototypeObject(
             this.aimShadowCastingCamera(cullVisitor, bbox);
 
             if (this._emptyCasterScene) {
-                // nothing to draw Early out.
-                this.noDraw();
+                // nothing to draw, tell receiver to do early out
+                // ie: in shader, no texfetch
+                this.markSceneAsNoShadow();
+                // Early out, no need to traverse scene either
                 return;
             }
 
@@ -914,7 +942,7 @@ MACROUTILS.createPrototypeObject(
 
             // re-apply the original traversal mask
             cullVisitor.setTraversalMask(traversalMask);
-            this._filledOnce = true;
+            this._needRedraw = false;
         },
 
         cleanReceivingStateSet: function(ignoreTexture) {
@@ -948,7 +976,7 @@ MACROUTILS.createPrototypeObject(
         cleanSceneGraph: function(ignoreTexture) {
             // well release a lot more things when it works
             this._cameraShadow = undefined;
-            this._filledOnce = false;
+            this._needRedraw = true;
 
             this.cleanReceivingStateSet(ignoreTexture);
 
@@ -998,4 +1026,4 @@ MACROUTILS.createPrototypeObject(
 
 ShadowMap.EPSILON = 5e-3;
 
-module.exports = ShadowMap;
+export default ShadowMap;

@@ -1,9 +1,8 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Bone = require('osgAnimation/Bone');
-var NodeVisitor = require('osg/NodeVisitor');
-var Notify = require('osg/notify');
-var Object = require('osg/Object');
+import utils from 'osg/utils';
+import Bone from 'osgAnimation/Bone';
+import NodeVisitor from 'osg/NodeVisitor';
+import notify from 'osg/notify';
+import Object from 'osg/Object';
 
 /**
  *  ValidateSkeletonVisitor
@@ -13,9 +12,9 @@ var ValidateSkeletonVisitor = function() {
     NodeVisitor.call(this);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ValidateSkeletonVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             if (node.getTypeID() !== Bone.getTypeID()) {
                 return;
@@ -27,7 +26,7 @@ MACROUTILS.createPrototypeObject(
                 var child = children[i];
                 if (child.getTypeID() === Bone.getTypeID()) {
                     if (foundNonBone) {
-                        Notify.warn(
+                        notify.warn(
                             'Warning: a Bone was found after a non-Bone child ' +
                                 'within a Skeleton. Children of a Bone must be ordered ' +
                                 'with all child Bones first for correct update order.'
@@ -61,9 +60,9 @@ var UpdateSkeleton = function() {
     this._needValidate = true;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     UpdateSkeleton,
-    MACROUTILS.objectInherit(Object.prototype, {
+    utils.objectInherit(Object.prototype, {
         needToValidate: function() {
             return this._needValidate;
         },
@@ -91,4 +90,4 @@ MACROUTILS.createPrototypeObject(
     'UpdateSkeleton'
 );
 
-module.exports = UpdateSkeleton;
+export default UpdateSkeleton;

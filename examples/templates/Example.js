@@ -82,9 +82,12 @@
         setConfigFromOptionsURL: function() {
             // default & change config with URL params
             var queryDict = {};
-            window.location.search.substr(1).split('&').forEach(function(item) {
-                queryDict[item.split('=')[0]] = item.split('=')[1];
-            });
+            window.location.search
+                .substr(1)
+                .split('&')
+                .forEach(function(item) {
+                    queryDict[item.split('=')[0]] = item.split('=')[1];
+                });
             var keys = Object.keys(queryDict);
             for (var i = 0; i < keys.length; i++) {
                 var property = keys[i];
@@ -98,7 +101,8 @@
                     }
                     this._config[property] = n;
                 } catch (e) {
-                    osg.log('cannot parse url option: ' + property);
+                    this._config[property] = value;
+                    osg.log('cannot parse url option: ' + property + ' = ' + value );
                 }
             }
         },

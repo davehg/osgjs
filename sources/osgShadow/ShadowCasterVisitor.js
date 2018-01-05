@@ -1,11 +1,10 @@
-'use strict';
-var BlendFunc = require('osg/BlendFunc');
-var Camera = require('osg/Camera');
-var Depth = require('osg/Depth');
-var Light = require('osg/Light');
-var LightSource = require('osg/LightSource');
-var NodeVisitor = require('osg/NodeVisitor');
-var MACROUTILS = require('osg/Utils');
+import BlendFunc from 'osg/BlendFunc';
+import Camera from 'osg/Camera';
+import Depth from 'osg/Depth';
+import Light from 'osg/Light';
+import LightSource from 'osg/LightSource';
+import NodeVisitor from 'osg/NodeVisitor';
+import utils from 'osg/utils';
 
 /*
  * Remove nodes that shouldn't not be culled when casting
@@ -21,9 +20,9 @@ var ShadowCasterVisitor = function(mask) {
     this._nodeList = [];
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ShadowCasterVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         reset: function() {
             this._nodeList = [];
         },
@@ -102,4 +101,4 @@ MACROUTILS.createPrototypeObject(
     'ShadowCasterVisitor'
 );
 
-module.exports = ShadowCasterVisitor;
+export default ShadowCasterVisitor;

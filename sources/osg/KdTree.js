@@ -1,11 +1,9 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var vec3 = require('osg/glMatrix').vec3;
-var BoundingBox = require('osg/BoundingBox');
-var primitiveIndexFunctor = require('osg/primitiveIndexFunctor');
-var primitiveSet = require('osg/primitiveSet');
-var notify = require('osg/notify');
+import utils from 'osg/utils';
+import { vec3 } from 'osg/glMatrix';
+import BoundingBox from 'osg/BoundingBox';
+import primitiveIndexFunctor from 'osg/primitiveIndexFunctor';
+import primitiveSet from 'osg/primitiveSet';
+import notify from 'osg/notify';
 
 // **** GENERAL INFO ON KDTREE ****
 // A KdTree is a Spatial Partitionning Tree (http://en.wikipedia.org/wiki/Space_partitioning)
@@ -447,7 +445,7 @@ var KdTree = function() {
     this._numPrimitiveIndices = 0;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     KdTree,
     {
         getVertices: function() {
@@ -590,4 +588,4 @@ MACROUTILS.createPrototypeObject(
     'KdTree'
 );
 
-module.exports = KdTree;
+export default KdTree;

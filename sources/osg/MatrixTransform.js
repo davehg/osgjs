@@ -1,8 +1,7 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var mat4 = require('osg/glMatrix').mat4;
-var Transform = require('osg/Transform');
-var TransformEnums = require('osg/transformEnums');
+import utils from 'osg/utils';
+import { mat4 } from 'osg/glMatrix';
+import Transform from 'osg/Transform';
+import TransformEnums from 'osg/transformEnums';
 
 /**
  *  MatrixTransform is a Transform Node that can be customized with user matrix
@@ -14,9 +13,9 @@ var MatrixTransform = function() {
 };
 
 /** @lends MatrixTransform.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     MatrixTransform,
-    MACROUTILS.objectInherit(Transform.prototype, {
+    utils.objectInherit(Transform.prototype, {
         getMatrix: function() {
             return this.matrix;
         },
@@ -54,4 +53,4 @@ MACROUTILS.createPrototypeNode(
     'MatrixTransform'
 );
 
-module.exports = MatrixTransform;
+export default MatrixTransform;

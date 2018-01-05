@@ -1,12 +1,9 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var BufferArray = require('osg/BufferArray');
-var Geometry = require('osg/Geometry');
-var NodeVisitor = require('osg/NodeVisitor');
-var primitiveSet = require('osg/primitiveSet');
-var vec3 = require('osg/glMatrix').vec3;
-
-var osg = MACROUTILS;
+import utils from 'osg/utils';
+import BufferArray from 'osg/BufferArray';
+import Geometry from 'osg/Geometry';
+import NodeVisitor from 'osg/NodeVisitor';
+import primitiveSet from 'osg/primitiveSet';
+import { vec3 } from 'osg/glMatrix';
 
 var TangentSpaceGenerator = function() {
     NodeVisitor.call(this);
@@ -16,9 +13,9 @@ var TangentSpaceGenerator = function() {
     this._texCoordUnit = 0;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     TangentSpaceGenerator,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             if (node.getTypeID() === Geometry.getTypeID()) this.generate(node, this._texCoordUnit);
             else this.traverse(node);
@@ -61,16 +58,16 @@ MACROUTILS.createPrototypeObject(
             if (this._texCoordUnit === undefined) this._texCoordUnit = 0;
 
             var size = geometry.getAttributes().Vertex.getElements().length;
-            this._T = new osg.Float32Array(size);
-            this._B = new osg.Float32Array(size);
-            this._N = new osg.Float32Array(size);
+            this._T = new utils.Float32Array(size);
+            this._B = new utils.Float32Array(size);
+            this._N = new utils.Float32Array(size);
 
             geometry.getPrimitiveSetList().forEach(function(primitive) {
                 this.computePrimitiveSet(geometry, primitive);
             }, this);
 
             var nbElements = size / 3;
-            var tangents = new osg.Float32Array(nbElements * 4);
+            var tangents = new utils.Float32Array(nbElements * 4);
 
             var tmp0 = vec3.create();
             var tmp1 = vec3.create();
@@ -249,4 +246,4 @@ MACROUTILS.createPrototypeObject(
     'TangentSpaceGenerator'
 );
 
-module.exports = TangentSpaceGenerator;
+export default TangentSpaceGenerator;

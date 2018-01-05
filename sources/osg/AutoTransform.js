@@ -1,14 +1,10 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var Transform = require('osg/Transform');
-var vec3 = require('osg/glMatrix').vec3;
-var vec4 = require('osg/glMatrix').vec4;
-var quat = require('osg/glMatrix').quat;
-var mat4 = require('osg/glMatrix').mat4;
-var NodeVisitor = require('osg/NodeVisitor');
-var TransformEnums = require('osg/transformEnums');
-var Node = require('osg/Node');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
+import Transform from 'osg/Transform';
+import { vec3, vec4, quat, mat4 } from 'osg/glMatrix';
+import NodeVisitor from 'osg/NodeVisitor';
+import TransformEnums from 'osg/transformEnums';
+import Node from 'osg/Node';
 
 /** AutoTransform is a derived form of Transform that automatically
  * scales or rotates to keep its children aligned with screen coordinates.
@@ -41,9 +37,9 @@ var AutoTransform = function() {
 };
 
 /** @lends Autotransform.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     AutoTransform,
-    MACROUTILS.objectInherit(Transform.prototype, {
+    utils.objectInherit(Transform.prototype, {
         getMatrix: function() {
             return this._matrix;
         },
@@ -73,10 +69,15 @@ MACROUTILS.createPrototypeNode(
         },
 
         setScale: function(scale) {
-            this.setScaleFromvec3(vec3.fromValues(scale, scale, scale));
+            this.setScaleFromVec3(vec3.fromValues(scale, scale, scale));
         },
 
         setScaleFromvec3: function(scaleVec) {
+            notify.warn('deprecated, use setScaleFromVec3');
+            this.setScaleFromVec3(scaleVec);
+        },
+
+        setScaleFromVec3: function(scaleVec) {
             this._scale = scaleVec;
             this._matrixDirty = true;
             this.dirtyBound();
@@ -353,4 +354,4 @@ MACROUTILS.createPrototypeNode(
     'AutoTransform'
 );
 
-module.exports = AutoTransform;
+export default AutoTransform;

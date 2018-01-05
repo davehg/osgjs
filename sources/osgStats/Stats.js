@@ -1,18 +1,71 @@
-var MACROUTILS = require('osg/Utils');
-var BlendFunc = require('osg/BlendFunc');
-var Camera = require('osg/Camera');
-var CullFace = require('osg/CullFace');
-var Depth = require('osg/Depth');
-var Node = require('osg/Node');
-var Program = require('osg/Program');
-var Shader = require('osg/Shader');
-var Transform = require('osg/Transform');
-var Texture = require('osg/Texture');
-var mat4 = require('osg/glMatrix').mat4;
-var BufferStats = require('osgStats/BufferStats');
-var Counter = require('osgStats/Counter');
-var Graph = require('osgStats/Graph');
-var TextGenerator = require('osgStats/TextGenerator');
+import utils from 'osg/utils';
+import BlendFunc from 'osg/BlendFunc';
+import Camera from 'osg/Camera';
+import CullFace from 'osg/CullFace';
+import Depth from 'osg/Depth';
+import MatrixTransform from 'osg/MatrixTransform';
+import Program from 'osg/Program';
+import Shader from 'osg/Shader';
+import Transform from 'osg/Transform';
+import Texture from 'osg/Texture';
+import { mat4, vec2, vec3 } from 'osg/glMatrix';
+import BufferStats from 'osgStats/BufferStats';
+import Counter from 'osgStats/Counter';
+import Graph from 'osgStats/Graph';
+import TextGenerator from 'osgStats/TextGenerator';
+import IntersectionVisitor from 'osgUtil/IntersectionVisitor';
+import LineSegmentIntersector from 'osgUtil/LineSegmentIntersector';
+import shape from 'osg/shape';
+import BoundingBox from 'osg/BoundingBox';
+
+// Stats usages:
+// url usable in Options
+//
+// to active the stats: ?stats=1
+//
+// to filter content in the stats: statsFilter=cull;myGroup;webgl
+//
+// to change the fontSize: statsFontSize=40
+//
+// You can also change the configuration before running the viewer to adds counters
+// var config = {
+//     values: {
+//         myCounter: {
+//             caption: 'my uber counter',
+//             average: true,
+//             graph: true,
+//             over: 16
+//         },
+//         myCounter2: {
+//             caption: 'a second counter',
+//             graph: true,
+//             below: 16
+//         }
+//         groups: [
+//             {
+//                 name: myGroup,
+//                 caption: 'blah my group',
+//                 values: [ 'myCounter', 'myCounter2' ]
+//             }
+//         ]
+//     };
+//     getViewerStats().addConfig(config)
+//     getViewerStats().setShowFilter(['cull', 'myGroup']) // will display only cull
+//     and myGroup groups
+//     getViewerStats().setFontSize(50)
+
+var getCanvasCoord = function(vec, e) {
+    if (e.touches && e.touches.length) {
+        var touch = e.touches[0];
+        vec[0] = touch.pageX;
+        vec[1] = touch.pageY;
+    } else {
+        vec[0] = e.offsetX === undefined ? e.layerX : e.offsetX;
+        vec[1] = e.offsetY === undefined ? e.layerY : e.offsetY;
+    }
+};
+
+var PICKING_NODEMASK = 0x8000;
 
 var createShader = function() {
     var vertexshader = [
@@ -65,15 +118,16 @@ var createShader = function() {
     );
 };
 
-var Stats = function(viewport, options) {
+var Stats = function(viewer, options) {
     this._captionsBuffer = undefined;
     this._valuesBuffer = undefined;
 
     this._dirtyCaptions = true;
     this._dirtyValues = true;
 
+    this._viewer = viewer;
     this._labelMaxWidth = 0;
-    this._viewport = viewport;
+    this._viewport = viewer.getCamera().getViewport();
 
     this._node = undefined;
     this._text = undefined;
@@ -88,6 +142,8 @@ var Stats = function(viewport, options) {
     this._width = 0;
     this._height = 0;
 
+    this._maxCaptionTextLength = 32;
+
     this._lineFactor = 1.1;
     this._displayFilter = [];
 
@@ -99,10 +155,20 @@ var Stats = function(viewport, options) {
 
     this._graphToDisplay = [];
 
+    this._valuesMaxWidth = 6 * 12;
+
+    this._showGraph = false;
+
+    // inputs data
+    this._backgroundPicking = shape.createTexturedQuadGeometry(0, 0, 0, 10, 0, 0, 0, 10, 0);
+    this._dragStop = vec2.create();
+    this._dragStart = vec2.create();
+    this._startTransformation = mat4.create();
+
     this._init(options);
 };
 
-MACROUTILS.createPrototypeObject(Stats, {
+utils.createPrototypeObject(Stats, {
     getCounter: function(name) {
         if (!this._counters[name]) {
             this._counters[name] = new Counter({
@@ -130,7 +196,8 @@ MACROUTILS.createPrototypeObject(Stats, {
                 var groupConfig = config.groups[i];
                 var group = {
                     caption: groupConfig.caption,
-                    values: groupConfig.values
+                    values: groupConfig.values,
+                    textCursorY: new Float32Array(groupConfig.values.length)
                 };
 
                 var name = groupConfig.name ? groupConfig.name : groupConfig.caption;
@@ -141,6 +208,15 @@ MACROUTILS.createPrototypeObject(Stats, {
         if (config.update) {
             this._updates.push(config.update);
         }
+    },
+    reset: function() {
+        this._bufferStats.resetCaptions();
+        this._bufferStats.resetValues();
+
+        this._dirtyCaptions = true;
+        this._dirtyValue = true;
+
+        this._bufferStats.resize(this._bufferStats._maxNbVertexes);
     },
     update: function() {
         for (var i = 0; i < this._updates.length; i++) {
@@ -181,14 +257,19 @@ MACROUTILS.createPrototypeObject(Stats, {
         camera.setRenderOrder(Camera.POST_RENDER, 0);
         camera.setReferenceFrame(Transform.ABSOLUTE_RF);
         camera.setClearMask(0x0); // dont clear anything
-        var node = new Node();
+        var node = new MatrixTransform();
+        node.setName('StatsNode');
+        node.addChild(this._backgroundPicking);
+        this._nodeTransform = node;
+        this._backgroundPicking.setNodeMask(0);
+
         camera.addChild(node);
         camera.setName('osgStats');
+        camera.setViewport(this._viewport);
         this._node = camera;
-
         this._text = new TextGenerator();
 
-        var fontSize = 16;
+        var fontSize = 12;
         if (options) {
             var statsGroupList = options.getString('statsFilter');
             if (statsGroupList) {
@@ -197,28 +278,123 @@ MACROUTILS.createPrototypeObject(Stats, {
             }
             var statsFontSize = options.getNumber('statsFontSize');
             if (statsFontSize !== undefined) fontSize = statsFontSize;
+
+            this._showGraph = options.getBoolean('statsShowGraph');
         }
 
         var texture = new Texture();
         texture.setMinFilter(Texture.NEAREST);
         texture.setMagFilter(Texture.NEAREST);
-        this._text.setFontSize(fontSize);
+        this._text.setFontSize(fontSize * this._viewer.getCanvasPixelRatio());
         this._text.getCanvas().then(
             function(canvas) {
                 this._dirtyCaptions = true;
-                node.addChild(this._bufferStats.getGeometry());
+                var geometry = this._bufferStats.getGeometry();
+                geometry.setName('StatsGeometry');
+                geometry.setNodeMask(~PICKING_NODEMASK);
+                node.addChild(geometry);
                 texture.setImage(canvas);
+                // invalidate the bounding box, we dont want it
+                // to be used
+                geometry.setBound(new BoundingBox());
             }.bind(this)
         );
 
         node.getOrCreateStateSet().setAttributeAndModes(createShader());
         node.getOrCreateStateSet().setAttributeAndModes(new CullFace(CullFace.DISABLE));
-        node
-            .getOrCreateStateSet()
-            .setAttributeAndModes(new BlendFunc('SRC_ALPHA', 'ONE_MINUS_SRC_ALPHA'));
+        var blendFunc = new BlendFunc('SRC_ALPHA', 'ONE_MINUS_SRC_ALPHA');
+        node.getOrCreateStateSet().setAttributeAndModes(blendFunc);
         node.getOrCreateStateSet().setAttributeAndModes(new Depth(Depth.DISABLE));
         node.getOrCreateStateSet().setTextureAttributeAndModes(0, texture);
+
+        var canvas = this._viewer.getGraphicContext().canvas;
+
+        this._canvas = canvas;
+
+        canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
+        canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
+        canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
+        canvas.addEventListener('mouseout', this.onMouseUp.bind(this));
+
+        canvas.addEventListener('touchmove', this.onMouseMove.bind(this));
+        canvas.addEventListener('touchstart', this.onMouseDown.bind(this));
+        canvas.addEventListener('touchend', this.onMouseUp.bind(this));
+        canvas.addEventListener('touchcancel', this.onMouseUp.bind(this));
     },
+    onMouseDown: function(e) {
+        var hits = this.computeNearestIntersection(e);
+        this._onStats = !!hits.length;
+        if (!this._onStats) return;
+
+        this._viewer.setEnableManipulator(false);
+
+        e.preventDefault();
+        mat4.copy(this._startTransformation, this._nodeTransform.getMatrix());
+        getCanvasCoord(this._dragStart, e);
+        this._dragStop[1] = this._dragStart[1];
+    },
+    onMouseMove: (function() {
+        return function(e) {
+            if (!this._onStats) return;
+
+            getCanvasCoord(this._dragStop, e);
+            var dy = this._dragStop[1] - this._dragStart[1];
+            mat4.translate(
+                this._nodeTransform.getMatrix(),
+                this._startTransformation,
+                vec3.fromValues(0, -dy, 0)
+            );
+        };
+    })(),
+    onMouseUp: function() {
+        this._viewer.setEnableManipulator(true);
+        this._onStats = false;
+    },
+    computeNearestIntersection: (function() {
+        var coord = vec2.create();
+        var lsi = new LineSegmentIntersector();
+        var origIntersect = vec3.create();
+        var dstIntersect = vec3.create();
+        var iv = new IntersectionVisitor();
+        iv.setIntersector(lsi);
+        return function(e) {
+            getCanvasCoord(coord, e);
+
+            // canvas to webgl coord
+            var viewer = this._viewer;
+            var canvas = this._canvas;
+            var x = coord[0] * (viewer._canvasWidth / canvas.clientWidth);
+            var y = (canvas.clientHeight - coord[1]) * (viewer._canvasHeight / canvas.clientHeight);
+
+            lsi.reset();
+            lsi.set(vec3.set(origIntersect, x, y, 0.0), vec3.set(dstIntersect, x, y, 1.0));
+            iv.reset();
+
+            this._backgroundPicking.setNodeMask(PICKING_NODEMASK);
+            iv.setTraversalMask(PICKING_NODEMASK);
+            this._node.accept(iv);
+            var hits = lsi.getIntersections();
+            this._backgroundPicking.setNodeMask(0x0);
+
+            return hits;
+        };
+    })(),
+    _updateBackgroundPicking: function(x, y, w, h) {
+        var vertexes = this._backgroundPicking.getVertexAttributeList().Vertex.getElements();
+        vertexes[0] = x;
+        vertexes[1] = y + h;
+
+        vertexes[3] = x;
+        vertexes[4] = y;
+
+        vertexes[6] = x + w;
+        vertexes[7] = y;
+
+        vertexes[9] = x + w;
+        vertexes[10] = y + h;
+        this._backgroundPicking.dirtyBound();
+    },
+
     _generateCaptions: function() {
         var initialX = 0;
         var characterHeight = this._text.getCharacterHeight();
@@ -229,6 +405,13 @@ MACROUTILS.createPrototypeObject(Stats, {
 
         // generate background
         this._bufferStats.generateBackground(
+            0,
+            this._viewport.height() - this._backgroundHeight,
+            this._backgroundWidth,
+            this._backgroundHeight
+        );
+
+        this._updateBackgroundPicking(
             0,
             this._viewport.height() - this._backgroundHeight,
             this._backgroundWidth,
@@ -257,17 +440,25 @@ MACROUTILS.createPrototypeObject(Stats, {
                 var counter = this._counters[counterName];
                 if (!counter || !counter.isDisplayable()) continue;
 
+                group.textCursorY[j] = textCursorY;
+
                 var text = counter._caption;
-                textWidth = this._bufferStats.generateText(
-                    textCursorX,
-                    textCursorY,
-                    text,
-                    this._text,
-                    BufferStats.whiteColor
-                );
-                this._labelMaxWidth = Math.max(textWidth, this._labelMaxWidth);
-                textCursorX = initialX;
-                textCursorY -= characterHeight;
+                // could need to split the label on multi line
+                var nbSplits = text.length / this._maxCaptionTextLength;
+                for (var c = 0; c < nbSplits; c++) {
+                    var start = c * this._maxCaptionTextLength;
+                    var splitText = text.substr(start, this._maxCaptionTextLength);
+                    textWidth = this._bufferStats.generateText(
+                        textCursorX,
+                        textCursorY,
+                        splitText,
+                        this._text,
+                        BufferStats.whiteColor
+                    );
+                    this._labelMaxWidth = Math.max(textWidth, this._labelMaxWidth);
+                    textCursorY -= characterHeight;
+                    textCursorX = initialX;
+                }
             }
             textCursorY -= characterHeight;
         }
@@ -276,18 +467,18 @@ MACROUTILS.createPrototypeObject(Stats, {
     _generateValues: function() {
         var characterWidth = this._text.getCharacterWidth();
         var valuesOffsetX = this._labelMaxWidth + 2 * characterWidth;
-        var graphOffsetX = characterWidth * 6;
+        var graphOffsetX = this._valuesMaxWidth + 2 * characterWidth;
         var characterHeight = this._text.getCharacterHeight();
         var textCursorX = valuesOffsetX;
-        var textCursorY = this._viewport.height() - characterHeight;
+        var textCursorY;
 
         var filters = this._displayFilter;
+        var valuesMaxWidth = 0;
         for (var groupName in this._groups) {
             if (groupName && filters.length && filters.indexOf(groupName) === -1) continue;
 
             var group = this._groups[groupName];
             textCursorX = valuesOffsetX;
-            textCursorY -= this._lineFactor * characterHeight;
 
             for (var j = 0; j < group.values.length; j++) {
                 var counterName = group.values[j];
@@ -302,15 +493,23 @@ MACROUTILS.createPrototypeObject(Stats, {
                     text = value.toString();
                 }
 
+                textCursorY = group.textCursorY[j];
                 var color = BufferStats.whiteColor;
                 var over = counter.getOver();
                 var below = counter.getBelow();
                 if (over !== 0) color = value > over ? BufferStats.redColor : color;
                 else if (below !== 0) color = value < below ? BufferStats.redColor : color;
 
-                this._bufferStats.generateText(textCursorX, textCursorY, text, this._text, color);
+                var valueWidth = this._bufferStats.generateText(
+                    textCursorX,
+                    textCursorY,
+                    text,
+                    this._text,
+                    color
+                );
+                valuesMaxWidth = Math.max(valueWidth, valuesMaxWidth);
 
-                if (counter._graph) {
+                if (this._showGraph && counter._graph) {
                     if (!this._historyGraph[counterName]) {
                         this._historyGraph[counterName] = new Graph();
                     }
@@ -323,12 +522,11 @@ MACROUTILS.createPrototypeObject(Stats, {
                 }
 
                 textCursorX = valuesOffsetX;
-                textCursorY -= characterHeight;
             }
-            textCursorY -= characterHeight;
         }
-
         this._bufferStats.valuesEnd();
+
+        this._valuesMaxWidth = valuesMaxWidth;
 
         for (var g = 0; g < this._graphToDisplay.length; g++) {
             var graph = this._graphToDisplay[g];
@@ -338,7 +536,7 @@ MACROUTILS.createPrototypeObject(Stats, {
         var totalWidth = valuesOffsetX + graphOffsetX;
 
         if (this._graphToDisplay.length) totalWidth += Graph.maxGraphValue * 2 + 1;
-        var totalHeight = this._viewport.height() - textCursorY - 2 * characterHeight;
+        var totalHeight = this._viewport.height() - textCursorY;
 
         if (this._backgroundWidth !== totalWidth || this._backgroundHeight !== totalHeight) {
             this._backgroundWidth = totalWidth;
@@ -388,4 +586,4 @@ MACROUTILS.createPrototypeObject(Stats, {
     }
 });
 
-module.exports = Stats;
+export default Stats;

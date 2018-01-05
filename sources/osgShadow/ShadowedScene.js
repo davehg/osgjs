@@ -1,13 +1,12 @@
-'use strict';
-var CullVisitor = require('osg/CullVisitor');
-var mat4 = require('osg/glMatrix').mat4;
-var Node = require('osg/Node');
-var NodeVisitor = require('osg/NodeVisitor');
-var StateSet = require('osg/StateSet');
-var MACROUTILS = require('osg/Utils');
-var vec4 = require('osg/glMatrix').vec4;
-var ComputeBoundsVisitor = require('osg/ComputeBoundsVisitor');
-var ShadowCasterVisitor = require('osgShadow/ShadowCasterVisitor');
+import CullVisitor from 'osg/CullVisitor';
+import { mat4 } from 'osg/glMatrix';
+import Node from 'osg/Node';
+import NodeVisitor from 'osg/NodeVisitor';
+import StateSet from 'osg/StateSet';
+import utils from 'osg/utils';
+import { vec4 } from 'osg/glMatrix';
+import ComputeBoundsVisitor from 'osg/ComputeBoundsVisitor';
+import ShadowCasterVisitor from 'osgShadow/ShadowCasterVisitor';
 
 /**
  *  ShadowedScene provides a mechanism for decorating a scene that the needs to have shadows cast upon it.
@@ -44,9 +43,9 @@ var ShadowedScene = function(settings) {
 };
 
 /** @lends ShadowedScene.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     ShadowedScene,
-    MACROUTILS.objectInherit(Node.prototype, {
+    utils.objectInherit(Node.prototype, {
         getReceivingStateSet: function() {
             return this._receivingStateset;
         },
@@ -184,16 +183,18 @@ MACROUTILS.createPrototypeNode(
                         st.init();
                     }
 
-                    if (st.isEnabled() || !st.isFilledOnce()) isDirty = true;
+                    if (st.isContinuousUpdate() || st.needRedraw()) isDirty = true;
                 }
                 if (!isDirty) return;
 
                 var hasCastingScene = this.computeShadowedSceneBounds(nv);
                 if (!hasCastingScene) {
                     // no shadow but still may need to clear
+                    // and makes sure shadow receiver shader
+                    // uses optimized early out codepath
                     for (i = 0; i < lt; i++) {
                         st = this._shadowTechniques[i];
-                        st.noDraw();
+                        st.markSceneAsNoShadow();
                     }
 
                     return;
@@ -208,7 +209,7 @@ MACROUTILS.createPrototypeNode(
                 // cull Casters
                 for (i = 0; i < lt; i++) {
                     st = this._shadowTechniques[i];
-                    if (st.isEnabled() || !st.isFilledOnce()) {
+                    if (st.isContinuousUpdate() || st.needRedraw()) {
                         st.updateShadowTechnique(nv);
                         st.cullShadowCasting(nv, bbox);
                     }
@@ -234,4 +235,4 @@ CullVisitor.registerApplyFunction(
     CullVisitor.getApplyFunction(Node.nodeTypeID)
 );
 
-module.exports = ShadowedScene;
+export default ShadowedScene;

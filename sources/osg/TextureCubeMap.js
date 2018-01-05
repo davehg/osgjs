@@ -1,8 +1,7 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Image = require('osg/Image');
-var Notify = require('osg/notify');
-var Texture = require('osg/Texture');
+import utils from 'osg/utils';
+import Image from 'osg/Image';
+import notify from 'osg/notify';
+import Texture from 'osg/Texture';
 
 /**
  * TextureCubeMap
@@ -20,14 +19,29 @@ var TextureCubeMap = function() {
 };
 
 /** @lends TextureCubeMap.prototype */
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     TextureCubeMap,
-    MACROUTILS.objectInherit(Texture.prototype, {
+    utils.objectInherit(Texture.prototype, {
         setDefaultParameters: function() {
             Texture.prototype.setDefaultParameters.call(this);
             this._textureTarget = Texture.TEXTURE_CUBE_MAP;
 
             this._flipY = false;
+        },
+
+        invalidate: function() {
+            Texture.prototype.invalidate.call(this);
+            for (
+                var i = Texture.TEXTURE_CUBE_MAP_POSITIVE_X;
+                i < Texture.TEXTURE_CUBE_MAP_POSITIVE_X + 6;
+                i++
+            ) {
+                var faceImage = this._images[i];
+                if (this._images[Texture.TEXTURE_CUBE_MAP_POSITIVE_X].getImage()) {
+                    faceImage.dirty();
+                }
+            }
+            this.dirty();
         },
 
         cloneType: function() {
@@ -145,7 +159,7 @@ MACROUTILS.createPrototypeStateAttribute(
                 for (var face = 0; face < 6; face++) {
                     var faceImage = this._images[Texture.TEXTURE_CUBE_MAP_POSITIVE_X + face];
                     if (!faceImage.hasMipmap()) {
-                        Notify.error('mipmap not set correctly for TextureCubemap');
+                        notify.error('mipmap not set correctly for TextureCubemap');
                     }
 
                     var internalFormat = this._internalFormat;
@@ -240,7 +254,10 @@ MACROUTILS.createPrototypeStateAttribute(
         apply: function(state) {
             var gl = state.getGraphicContext();
             // if need to release the texture
-            if (this._dirtyTextureObject) this.releaseGLObjects();
+            if (this._dirtyTextureObject) {
+                this.releaseGLObjects();
+                this.setGraphicContext(gl);
+            }
 
             if (this._textureObject !== undefined && !this.isDirty()) {
                 this._textureObject.bind(gl);
@@ -283,4 +300,4 @@ MACROUTILS.createPrototypeStateAttribute(
     'TextureCubeMap'
 );
 
-module.exports = TextureCubeMap;
+export default TextureCubeMap;

@@ -1,8 +1,6 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
-var Uniform = require('osg/Uniform');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
+import Uniform from 'osg/Uniform';
 
 /**
  * MorphAttribute encapsulate Animation State
@@ -18,13 +16,14 @@ var MorphAttribute = function(nbTarget, disable) {
     this._hashNames = ''; // compute only once target hash names
 
     this._hash = ''; // cache of hash
+    this._dirtyHash = true;
 };
 
 MorphAttribute.uniforms = {};
 
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     MorphAttribute,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'Morph',
 
         cloneType: function() {
@@ -47,7 +46,7 @@ MACROUTILS.createPrototypeStateAttribute(
             }
 
             this._hashNames = hash;
-            this._hash = '';
+            this._dirtyHash = true;
         },
 
         getOrCreateUniforms: function() {
@@ -65,7 +64,7 @@ MACROUTILS.createPrototypeStateAttribute(
 
         setNumTargets: function(nb) {
             this._nbTarget = nb;
-            this._hash = '';
+            this._dirtyHash = true;
         },
 
         getNumTargets: function() {
@@ -85,13 +84,15 @@ MACROUTILS.createPrototypeStateAttribute(
         },
 
         getHash: function() {
-            if (!this._hash)
-                this._hash =
-                    this.getTypeMember() +
-                    this._hashNames +
-                    this.getNumTargets() +
-                    this.isEnabled();
+            if (!this._dirtyHash) return this._hash;
+
+            this._hash = this._computeInternalHash();
+            this._dirtyHash = false;
             return this._hash;
+        },
+
+        _computeInternalHash: function() {
+            return this.getTypeMember() + this._hashNames + this.getNumTargets() + this.isEnabled();
         },
 
         apply: function() {
@@ -105,4 +106,4 @@ MACROUTILS.createPrototypeStateAttribute(
     'MorphAttribute'
 );
 
-module.exports = MorphAttribute;
+export default MorphAttribute;

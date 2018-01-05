@@ -1,8 +1,6 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
-var Uniform = require('osg/Uniform');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
+import Uniform from 'osg/Uniform';
 
 /**
  * SkinningAttribute encapsulate Animation State
@@ -15,15 +13,18 @@ var SkinningAttribute = function(disable, boneUniformSize) {
     // optional, if it's not provided, it will fall back to the maximum bone uniform size
     // boneUniformSize represents the number of vec4 (uniform) used in the shader for all the bones
     this._boneUniformSize = boneUniformSize;
+
+    this._dirtyHash = true;
+    this._hash = '';
 };
 
 SkinningAttribute.uniforms = {};
 SkinningAttribute.maxBoneUniformSize = 1;
 SkinningAttribute.maxBoneUniformAllowed = Infinity; // can be overriden by application specific limit on startup (typically gl limit)
 
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     SkinningAttribute,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'Skinning',
 
         cloneType: function() {
@@ -75,6 +76,14 @@ MACROUTILS.createPrototypeStateAttribute(
         },
 
         getHash: function() {
+            if (!this._dirtyHash) return this._hash;
+
+            this._hash = this._computeInternalHash();
+            this._dirtyHash = true;
+            return this._hash;
+        },
+
+        _computeInternalHash: function() {
             // bone uniform size is hashed because the size of uniform is statically declared in the shader
             return this.getTypeMember() + this.getBoneUniformSize() + this.isEnabled();
         },
@@ -82,11 +91,13 @@ MACROUTILS.createPrototypeStateAttribute(
         apply: function() {
             if (!this._enable) return;
 
-            this.getOrCreateUniforms().uBones.getInternalArray().set(this._matrixPalette);
+            this.getOrCreateUniforms()
+                .uBones.getInternalArray()
+                .set(this._matrixPalette);
         }
     }),
     'osgAnimation',
     'SkinningAttribute'
 );
 
-module.exports = SkinningAttribute;
+export default SkinningAttribute;

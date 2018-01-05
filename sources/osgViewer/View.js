@@ -1,22 +1,23 @@
-'use strict';
-var BufferArray = require('osg/BufferArray');
-var Camera = require('osg/Camera');
-var FrameStamp = require('osg/FrameStamp');
-var FrameBufferObject = require('osg/FrameBufferObject');
-var Light = require('osg/Light');
-var mat4 = require('osg/glMatrix').mat4;
-var Texture = require('osg/Texture');
-var Program = require('osg/Program');
-var Shader = require('osg/Shader');
-var vec3 = require('osg/glMatrix').vec3;
-var Viewport = require('osg/Viewport');
-var WebGLCaps = require('osg/WebGLCaps');
-var IntersectionVisitor = require('osgUtil/IntersectionVisitor');
-var LineSegmentIntersector = require('osgUtil/LineSegmentIntersector');
-var Renderer = require('osgViewer/Renderer');
-var Scene = require('osgViewer/Scene');
-var DisplayGraph = require('osgUtil/DisplayGraph');
-var Notify = require('osg/notify');
+import BufferArray from 'osg/BufferArray';
+import Camera from 'osg/Camera';
+import FrameStamp from 'osg/FrameStamp';
+import FrameBufferObject from 'osg/FrameBufferObject';
+import Light from 'osg/Light';
+import { mat4 } from 'osg/glMatrix';
+import Texture from 'osg/Texture';
+import Program from 'osg/Program';
+import Shader from 'osg/Shader';
+import Scissor from 'osg/Scissor';
+import { vec3 } from 'osg/glMatrix';
+import Viewport from 'osg/Viewport';
+import VertexArrayObject from 'osg/VertexArrayObject';
+import WebGLCaps from 'osg/WebGLCaps';
+import IntersectionVisitor from 'osgUtil/IntersectionVisitor';
+import LineSegmentIntersector from 'osgUtil/LineSegmentIntersector';
+import Renderer from 'osgViewer/Renderer';
+import Scene from 'osgViewer/Scene';
+import DisplayGraph from 'osgUtil/DisplayGraph';
+import notify from 'osg/notify';
 
 // View is normally inherited from osg/View. In osgjs we dont need it yet
 // this split, so everything is in osgViewer/View
@@ -65,15 +66,21 @@ View.prototype = {
     },
 
     setGraphicContext: function(gc) {
-        this.getCamera().getRenderer().getState().setGraphicContext(gc);
+        this.getCamera()
+            .getRenderer()
+            .getState()
+            .setGraphicContext(gc);
     },
 
     getGraphicContext: function() {
-        return this.getCamera().getRenderer().getState().getGraphicContext();
+        return this.getCamera()
+            .getRenderer()
+            .getState()
+            .getGraphicContext();
     },
 
-    initWebGLCaps: function(gl) {
-        WebGLCaps.instance(gl);
+    initWebGLCaps: function(gl, force) {
+        WebGLCaps.instance(gl, force);
     },
 
     // check Each frame because HTML standard inconsistencies
@@ -155,6 +162,7 @@ View.prototype = {
         var ratio = width / height;
 
         this._camera.setViewport(new Viewport(0, 0, width, height));
+        this._camera.setScissor(new Scissor());
 
         this._camera.setGraphicContext(this.getGraphicContext());
         mat4.lookAt(
@@ -172,7 +180,10 @@ View.prototype = {
         );
 
         if (options && options.enableFrustumCulling)
-            this.getCamera().getRenderer().getCullVisitor().setEnableFrustumCulling(true);
+            this.getCamera()
+                .getRenderer()
+                .getCullVisitor()
+                .setEnableFrustumCulling(true);
 
         // add a function to refresh the graph from the console
         if (options && options.debugGraph) {
@@ -183,7 +194,7 @@ View.prototype = {
                 displayGraph.createGraph(camera);
             };
 
-            Notify.log(
+            notify.log(
                 'to refresh the graphs type in the console:\nOSG.osgUtil.DisplayGraph.instance().refreshGraph()'
             );
         }
@@ -320,6 +331,7 @@ View.prototype = {
         var gl = this.getGraphicContext();
         var availableTime = availableTimeBudget;
         availableTime = BufferArray.flushDeletedGLBufferArrays(gl, availableTime);
+        availableTime = VertexArrayObject.flushDeletedGLVertexArrayObjects(gl, availableTime);
         availableTime = Texture.getTextureManager(gl).flushDeletedTextureObjects(gl, availableTime);
         availableTime = Program.flushDeletedGLPrograms(gl, availableTime);
         availableTime = Shader.flushDeletedGLShaders(gl, availableTime);
@@ -330,6 +342,7 @@ View.prototype = {
     flushAllDeletedGLObjects: function() {
         // Flush all deleted OpenGL objects
         var gl = this.getGraphicContext();
+        VertexArrayObject.flushAllDeletedGLVertexArrayObjects(gl);
         BufferArray.flushAllDeletedGLBufferArrays(gl);
         Texture.getTextureManager(gl).flushAllDeletedTextureObjects(gl);
         Program.flushAllDeletedGLPrograms(gl);
@@ -339,4 +352,4 @@ View.prototype = {
     }
 };
 
-module.exports = View;
+export default View;

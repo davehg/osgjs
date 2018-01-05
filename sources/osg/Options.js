@@ -1,15 +1,18 @@
-'use strict';
-var Notify = require('osg/notify');
-var MACROUTILS = require('osg/Utils');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
 
 var OptionsDefault = {
     antialias: true, // activate MSAA
     //'overrideDevicePixelRatio': 1, // if specified override the device pixel ratio
     fullscreen: true,
     enableFrustumCulling: false,
-    stats: false, // display canvas with stats for the viewer
     scrollwheel: true,
-    webgl2: false
+    webgl2: false,
+    powerPreference: 'high-performance',
+    stats: false // display stats, check in osgStats/Stats for all url options
+    // statsFilter=cull;myGroup;webgl filters groups to display
+    // statsFontSize=12 change the size of the fonts default 12
+    // statsShowGraph=1 display graph
 };
 
 var Options = function() {
@@ -48,19 +51,19 @@ Options.getOptionsURL = function() {
 
         switch (level) {
             case 'debug':
-                Notify.setNotifyLevel(Notify.DEBUG);
+                notify.setNotifyLevel(notify.DEBUG);
                 break;
             case 'info':
-                Notify.setNotifyLevel(Notify.INFO);
+                notify.setNotifyLevel(notify.INFO);
                 break;
             case 'notice':
-                Notify.setNotifyLevel(Notify.NOTICE);
+                notify.setNotifyLevel(notify.NOTICE);
                 break;
             case 'warn':
-                Notify.setNotifyLevel(Notify.WARN);
+                notify.setNotifyLevel(notify.WARN);
                 break;
             case 'error':
-                Notify.setNotifyLevel(Notify.ERROR);
+                notify.setNotifyLevel(notify.ERROR);
                 break;
             case 'html':
                 var logContent = [];
@@ -96,7 +99,7 @@ Options.getOptionsURL = function() {
 
 Options.prototype = {
     extend: function(options) {
-        MACROUTILS.objectMix(this, options);
+        utils.objectMix(this, options);
         return this;
     },
 
@@ -127,4 +130,4 @@ Options.prototype = {
     }
 };
 
-module.exports = Options;
+export default Options;

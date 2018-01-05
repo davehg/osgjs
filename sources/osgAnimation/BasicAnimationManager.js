@@ -1,16 +1,15 @@
-'use strict';
-var Notify = require('osg/notify');
-var MACROUTILS = require('osg/Utils');
-var BaseObject = require('osg/Object');
-var quat = require('osg/glMatrix').quat;
-var vec3 = require('osg/glMatrix').vec3;
-var mat4 = require('osg/glMatrix').mat4;
-var Channel = require('osgAnimation/channel');
-var Animation = require('osgAnimation/animation');
-var Interpolator = require('osgAnimation/interpolator');
-var CollectAnimationUpdateCallbackVisitor = require('osgAnimation/CollectAnimationUpdateCallbackVisitor');
-var Target = require('osgAnimation/target');
-var UpdateMorph = require('osgAnimation/UpdateMorph');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
+import BaseObject from 'osg/Object';
+import { quat } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
+import { mat4 } from 'osg/glMatrix';
+import Channel from 'osgAnimation/channel';
+import Animation from 'osgAnimation/animation';
+import Interpolator from 'osgAnimation/interpolator';
+import CollectAnimationUpdateCallbackVisitor from 'osgAnimation/CollectAnimationUpdateCallbackVisitor';
+import Target from 'osgAnimation/target';
+import UpdateMorph from 'osgAnimation/UpdateMorph';
 
 var Float = {
     lerp: function(a, b, t) {
@@ -19,7 +18,7 @@ var Float = {
     init: function() {
         return 0.0;
     },
-    copy: function(src) {
+    copy: function(out, src) {
         return src;
     },
     create: function() {
@@ -122,9 +121,9 @@ var BasicAnimationManager = function() {
     this._seekTime = -1;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     BasicAnimationManager,
-    MACROUTILS.objectInherit(BaseObject.prototype, {
+    utils.objectInherit(BaseObject.prototype, {
         init: function(animations) {
             // reset all
             this._simulationTime = 0.0;
@@ -291,7 +290,7 @@ MACROUTILS.createPrototypeObject(
         playAnimationObject: function(obj) {
             var anim = this._instanceAnimations[obj.name];
             if (!anim) {
-                Notify.info('no animation ' + obj.name + ' found');
+                notify.info('no animation ' + obj.name + ' found');
                 return;
             }
 
@@ -356,7 +355,7 @@ MACROUTILS.createPrototypeObject(
                 // it must be a user decision in case the user plugin different scene
                 // graph together and target would appear later in the scenegraph
                 if (!this._targetMap[uniqueTargetName]) {
-                    Notify.warn(
+                    notify.warn(
                         'registerInstanceAnimation did not find targetName (' +
                             uniqueTargetName +
                             ') in the scene graph'
@@ -403,7 +402,7 @@ MACROUTILS.createPrototypeObject(
                     // detect differents target instance with same
                     // unique target name. It's a problem
                     if (target !== targetMap[uniqueTargetName])
-                        Notify.warn(
+                        notify.warn(
                             'detected differents target instance with the same name (' + name + ')'
                         );
                 }
@@ -515,9 +514,9 @@ MACROUTILS.createPrototypeObject(
 
                 if (nbChannels === 0) {
                     // no blending ?
-                    target.value = operatorType.copy(target.defaultValue, target.value);
+                    target.value = operatorType.copy(target.value, target.defaultValue);
                 } else if (nbChannels === 1) {
-                    target.value = operatorType.copy(affectedChannels[0].value, target.value);
+                    target.value = operatorType.copy(target.value, affectedChannels[0].value);
                 } else {
                     // blend between multiple channels
                     target.value = operatorType.init(target.value);
@@ -552,8 +551,9 @@ MACROUTILS.createPrototypeObject(
                 var tLocal = t - channel.t;
 
                 // handle loop, careful in case animation is one frame
-                if (loop && instanceAnimation.duration > 0.0)
+                if (loop && instanceAnimation.duration > 0.0) {
                     tLocal = tLocal % instanceAnimation.duration;
+                }
 
                 interpolator(tLocal + instanceAnimation.firstKeyTime, channel);
             }
@@ -684,4 +684,4 @@ MACROUTILS.createPrototypeObject(
 
 BasicAnimationManager.TypeToSize = TypeToSize;
 
-module.exports = BasicAnimationManager;
+export default BasicAnimationManager;

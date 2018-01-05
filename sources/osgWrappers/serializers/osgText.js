@@ -1,8 +1,7 @@
-'use strict';
-var P = require('bluebird');
-var osgWrapper = require('osgWrappers/serializers/osg');
-var Notify = require('osg/notify');
-var Text = require('osgText/Text');
+import P from 'bluebird';
+import osgWrapper from 'osgWrappers/serializers/osg';
+import notify from 'osg/notify';
+import Text from 'osgText/Text';
 
 var osgTextWrapper = {};
 
@@ -18,7 +17,7 @@ osgTextWrapper.Text = function(input, node) {
     node.setCharacterSize(jsonObj.CharacterSize);
 
     if (jsonObj.Layout === 'VERTICAL') {
-        Notify.error('Vertical Alignment not supported');
+        notify.error('Vertical Alignment not supported');
         return P.reject();
     }
     var alignment = jsonObj.Alignment;
@@ -37,7 +36,7 @@ osgTextWrapper.Text = function(input, node) {
             alignment = Text.RIGHT_BOTTOM;
         }
         /*develblock:start*/
-        Notify.log('Base line alignments not supported, alignment converted');
+        notify.log('Base line alignments not supported, alignment converted');
         /*develblock:end*/
     }
     node.setAlignment(alignment);
@@ -46,4 +45,4 @@ osgTextWrapper.Text = function(input, node) {
     return promise;
 };
 
-module.exports = osgTextWrapper;
+export default osgTextWrapper;

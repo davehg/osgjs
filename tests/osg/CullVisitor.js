@@ -1,33 +1,36 @@
-'use strict';
-var assert = require('chai').assert;
-var mockup = require('tests/mockup/mockup');
-var BoundingBox = require('osg/BoundingBox');
-var Camera = require('osg/Camera');
-var CullSettings = require('osg/CullSettings');
-var CullVisitor = require('osg/CullVisitor');
-var mat4 = require('osg/glMatrix').mat4;
-var MatrixTransform = require('osg/MatrixTransform');
-var Node = require('osg/Node');
-var RenderBin = require('osg/RenderBin');
-var RenderStage = require('osg/RenderStage');
-var Shape = require('osg/shape');
-var StateGraph = require('osg/StateGraph');
-var State = require('osg/State');
-var StateSet = require('osg/StateSet');
-var TransformEnums = require('osg/transformEnums');
-var vec3 = require('osg/glMatrix').vec3;
-var Viewport = require('osg/Viewport');
-var View = require('osgViewer/View');
-var ShaderGeneratorProxy = require('osgShader/ShaderGeneratorProxy');
+import { assert } from 'chai';
+import mockup from 'tests/mockup/mockup';
+import BoundingBox from 'osg/BoundingBox';
+import Camera from 'osg/Camera';
+import CullSettings from 'osg/CullSettings';
+import CullVisitor from 'osg/CullVisitor';
+import { mat4 } from 'osg/glMatrix';
+import MatrixTransform from 'osg/MatrixTransform';
+import Node from 'osg/Node';
+import RenderBin from 'osg/RenderBin';
+import RenderStage from 'osg/RenderStage';
+import Shape from 'osg/shape';
+import StateGraph from 'osg/StateGraph';
+import State from 'osg/State';
+import StateSet from 'osg/StateSet';
+import TransformEnums from 'osg/transformEnums';
+import { vec3 } from 'osg/glMatrix';
+import Viewport from 'osg/Viewport';
+import View from 'osgViewer/View';
+import ShaderGeneratorProxy from 'osgShader/ShaderGeneratorProxy';
 
-module.exports = function() {
+export default function() {
     test('CullVisitor', function() {
+        console.log('toto');
         var canvas = mockup.createCanvas();
         var viewer = new mockup.Viewer(canvas);
         viewer.setupManipulator();
         viewer.init();
         viewer.frame();
-        var uv = viewer.getCamera().getRenderer().getCullVisitor();
+        var uv = viewer
+            .getCamera()
+            .getRenderer()
+            .getCullVisitor();
         var root = new Node();
         root.setName('a');
         var b = new Node();
@@ -69,7 +72,7 @@ module.exports = function() {
         assert.isOk(callc === 0, 'Did not Call c cull callback as expected');
         mockup.removeCanvas(canvas);
     });
-
+    return;
     test('CullVisitor 2', function() {
         // check render stage and render bin
         (function() {
@@ -200,9 +203,7 @@ module.exports = function() {
             var resultProjection;
 
             var popProjectionMatrix = function() {
-                resultProjection = this._projectionMatrixStack[
-                    this._projectionMatrixStack.length - 1
-                ];
+                resultProjection = this._projectionMatrixStack.back();
                 CullVisitor.prototype.popProjectionMatrix.call(this);
             };
             CullVisitor.prototype.setCullSettings = setCullSettings;
@@ -286,9 +287,7 @@ module.exports = function() {
             var resultProjection;
 
             var popProjectionMatrix = function() {
-                resultProjection = this._projectionMatrixStack[
-                    this._projectionMatrixStack.length - 1
-                ];
+                resultProjection = this.getCurrentProjectionMatrix();
                 CullVisitor.prototype.popProjectionMatrix.call(this);
             };
 
@@ -401,9 +400,7 @@ module.exports = function() {
             var resultProjection;
 
             var popProjectionMatrix = function() {
-                resultProjection = this._projectionMatrixStack[
-                    this._projectionMatrixStack.length - 1
-                ];
+                resultProjection = this.getCurrentProjectionMatrix();
                 CullVisitor.prototype.popProjectionMatrix.call(this);
             };
 
@@ -498,11 +495,11 @@ module.exports = function() {
             node3.accept(cull);
             rs.sort();
 
-            assert.isOk(rs._bins['0']._leafs[2]._depth === -15, 'Check depth of leaf 0');
-            assert.isOk(rs._bins['0']._leafs[1]._depth === -10, 'Check depth of leaf 1');
-            assert.isOk(rs._bins['0']._leafs[0]._depth === 5, 'Check depth of leaf 2');
+            assert.isOk(rs._bins.getMap()['0']._leafs[2]._depth === -15, 'Check depth of leaf 0');
+            assert.isOk(rs._bins.getMap()['0']._leafs[1]._depth === -10, 'Check depth of leaf 1');
+            assert.isOk(rs._bins.getMap()['0']._leafs[0]._depth === 5, 'Check depth of leaf 2');
             assert.isOk(
-                rs._bins['0']._sortMode === RenderBin.SORT_BACK_TO_FRONT,
+                rs._bins.getMap()['0']._sortMode === RenderBin.SORT_BACK_TO_FRONT,
                 'Check RenderBin sort mode'
             );
         })();
@@ -544,14 +541,15 @@ module.exports = function() {
             root.accept(cull);
             rs.sort();
 
-            assert.isOk(rs._bins['10']._leafs[0]._depth === 10, 'Check transparent bin');
+            assert.isOk(rs._bins.getMap()['10']._leafs[0]._depth === 10, 'Check transparent bin');
+            var binMap = rs._bins.getMap();
             assert.isOk(
-                rs._bins['10'].getStateGraphList().length === 0,
+                binMap[10].getStateGraphList().getLength() === 0,
                 'Check transparent bin StateGraphList'
             );
             assert.isOk(rs._leafs.length === 0, 'Check leafs for normal rendering bin');
             assert.isOk(
-                rs.getStateGraphList().length === 1,
+                rs.getStateGraphList().getLength() === 1,
                 'Check StateGraphList for normal rendering bin'
             );
             mockup.removeCanvas(canvas);
@@ -612,19 +610,22 @@ module.exports = function() {
         })();
 
         (function() {
+            var getFirstPositionedAttribute = function(renderStage) {
+                return renderStage.getPositionedAttribute().getArray()[0][0];
+            };
             var canvas = mockup.createCanvas();
             var viewer = new mockup.Viewer(canvas);
             viewer.init();
 
             viewer.frame();
             var cull = viewer.getCamera().getRenderer()._cullVisitor;
-            var m = cull._currentRenderBin.getStage().positionedAttribute[0][0];
+            var m = getFirstPositionedAttribute(cull._currentRenderBin.getStage());
             // Test for HeadLight, matrix should be identity
             assert.equalVector(m, [1, 0, -0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
             // Test for Sky_Light, matrix != identity
             viewer.setLightingMode(View.LightingMode.SKY_LIGHT);
             viewer.frame();
-            m = cull._currentRenderBin.getStage().positionedAttribute[0][0];
+            m = getFirstPositionedAttribute(cull._currentRenderBin.getStage());
             assert.equalVector(m, [-1, 0, -0, 0, 0, 1, -0, 0, 0, -0, -1, 0, 0, 0, -10, 1]);
 
             mockup.removeCanvas(canvas);
@@ -793,9 +794,10 @@ module.exports = function() {
 
         root.accept(cull);
 
-        assert.isOk(cull._reserveLeafStack.length > 1, 'check we have leaf to validate this test');
-        for (var i = 0; i < cull._reserveLeafStack.length - 1; i++) {
-            checkLeaf(cull._reserveLeafStack[i]);
-        }
+        assert.isOk(cull._pooledLeaf.getLength() > 1, 'check we have leaf to validate this test');
+        cull._pooledLeaf.forEach(checkLeaf);
+        // for (var i = 0; i < cull._pooledLeaf.getLength() - 1; i++) {
+        //     checkLeaf(cull._pooledLeaf._pool[i]);
+        // }
     });
-};
+}

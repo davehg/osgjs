@@ -1,19 +1,18 @@
-'use strict';
-var assert = require('chai').assert;
-var MACROUTILS = require('osg/Utils');
-require('tests/mockup/mockup');
-var primitiveFunctor = require('osg/primitiveFunctor');
-var primitiveSet = require('osg/primitiveSet');
-var DrawElements = require('osg/DrawElements');
-var DrawArrays = require('osg/DrawArrays');
-var Geometry = require('osg/Geometry');
-var BufferArray = require('osg/BufferArray');
-var vec3 = require('osg/glMatrix').vec3;
+import { assert } from 'chai';
+import utils from 'osg/utils';
+import 'tests/mockup/mockup';
+import primitiveFunctor from 'osg/primitiveFunctor';
+import primitiveSet from 'osg/primitiveSet';
+import DrawElements from 'osg/DrawElements';
+import DrawArrays from 'osg/DrawArrays';
+import Geometry from 'osg/Geometry';
+import BufferArray from 'osg/BufferArray';
+import { vec3 } from 'osg/glMatrix';
 
-module.exports = function() {
+export default function() {
     var createGeometry = function(primitiveType, arraysOrElements) {
         var g = new Geometry();
-        var vertexes = new MACROUTILS.Float32Array(9);
+        var vertexes = new utils.Float32Array(9);
         vertexes[0] = 0;
         vertexes[1] = 0;
         vertexes[2] = 0;
@@ -26,7 +25,7 @@ module.exports = function() {
         vertexes[7] = 2.0;
         vertexes[8] = 0.0;
 
-        var normal = new MACROUTILS.Float32Array(9);
+        var normal = new utils.Float32Array(9);
         normal[0] = 0;
         normal[1] = 0;
         normal[2] = 1;
@@ -39,7 +38,7 @@ module.exports = function() {
         normal[7] = 0;
         normal[8] = 1;
 
-        var indexes = new MACROUTILS.Uint16Array(3);
+        var indexes = new utils.Uint16Array(3);
         indexes[0] = 2;
         indexes[1] = 0;
         indexes[2] = 1;
@@ -200,4 +199,4 @@ module.exports = function() {
         assert.equalVector(vectors[1], [0, 0, 0]);
         assert.equalVector(vectors[2], [2.0, 2.0, 0]);
     });
-};
+}

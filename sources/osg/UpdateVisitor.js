@@ -1,6 +1,5 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var NodeVisitor = require('osg/NodeVisitor');
+import utils from 'osg/utils';
+import NodeVisitor from 'osg/NodeVisitor';
 
 var UpdateVisitor = function() {
     NodeVisitor.call(this);
@@ -8,9 +7,9 @@ var UpdateVisitor = function() {
     this._numUpdateCallback = 0;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     UpdateVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         resetStats: function() {
             this._numUpdateCallback = 0;
         },
@@ -49,4 +48,4 @@ MACROUTILS.createPrototypeObject(
     'NodeVisitor'
 );
 
-module.exports = UpdateVisitor;
+export default UpdateVisitor;

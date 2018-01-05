@@ -1,6 +1,5 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Texture = require('osg/Texture');
+import utils from 'osg/utils';
+import Texture from 'osg/Texture';
 
 var kernelSizeList = [
     '1Tap(4texFetch)',
@@ -56,7 +55,7 @@ var ShadowSettings = function(options) {
     this.shadowCastShaderGeneratorName = 'ShadowCast';
 
     // if url options override url options
-    MACROUTILS.objectMix(this, options);
+    utils.objectMix(this, options);
 };
 
 ShadowSettings.kernelSizeList = kernelSizeList;
@@ -109,4 +108,4 @@ ShadowSettings.prototype = {
     }
 };
 
-module.exports = ShadowSettings;
+export default ShadowSettings;

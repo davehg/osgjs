@@ -1,16 +1,16 @@
-'use strict';
-var P = require('bluebird');
-var Notify = require('osg/notify');
-var osgWrapper = require('osgWrappers/serializers/osg');
-var Channel = require('osgAnimation/channel');
-var Animation = require('osgAnimation/animation');
-var ReaderParser = require('osgDB/readerParser');
-var StackedMatrix = require('osgAnimation/StackedMatrix');
-var StackedScale = require('osgAnimation/StackedScale');
-var MorphGeometry = require('osgAnimation/MorphGeometry');
-var Geometry = require('osg/Geometry');
+import P from 'bluebird';
+import utils from 'osg/utils';
+import notify from 'osg/notify';
+import osgWrapper from 'osgWrappers/serializers/osg';
+import Channel from 'osgAnimation/channel';
+import Animation from 'osgAnimation/animation';
+import ReaderParser from 'osgDB/readerParser';
+import StackedMatrix from 'osgAnimation/StackedMatrix';
+import StackedScale from 'osgAnimation/StackedScale';
+import MorphGeometry from 'osgAnimation/MorphGeometry';
+import Geometry from 'osg/Geometry';
 
-/*eslint new-cap: [2, {"capIsNewExceptions": ["Geometry", "MatrixTransform", "StandardVec3Channel", "StandardQuatChannel", "StandardFloatChannel", "MorphGeometry"]}]*/
+var rejectObject = utils.rejectObject;
 
 var osgAnimationWrapper = {};
 
@@ -29,8 +29,9 @@ registry.registerObject('osgAnimation.StackedScaleElement', StackedScale);
 
 osgAnimationWrapper.Animation = function(input) {
     var jsonObj = input.getJSON();
-    if (jsonObj.Name === undefined || !jsonObj.Channels || jsonObj.Channels.length === 0)
-        return P.reject();
+    if (jsonObj.Name === undefined || !jsonObj.Channels || jsonObj.Channels.length === 0) {
+        return rejectObject('Animation', jsonObj);
+    }
 
     var arrayChannelsPromise = [];
 
@@ -54,8 +55,9 @@ osgAnimationWrapper.StandardVec3Channel = function(input, channel, creator) {
         !jsonObj.KeyFrames.Time ||
         !jsonObj.KeyFrames.Key ||
         jsonObj.KeyFrames.Key.length !== 3
-    )
-        return P.reject();
+    ) {
+        return rejectObject('StandardVec3Channel', jsonObj);
+    }
 
     var jsTime = input.setJSON(jsonObj.KeyFrames.Time).readBufferArray();
     var jsKeyX = input.setJSON(jsonObj.KeyFrames.Key[0]).readBufferArray();
@@ -96,8 +98,9 @@ osgAnimationWrapper.StandardQuatChannel = function(input, channel, creator) {
         !jsonObj.KeyFrames.Time ||
         !jsonObj.KeyFrames.Key ||
         jsonObj.KeyFrames.Key.length !== 4
-    )
-        return P.reject();
+    ) {
+        return rejectObject('StandardQuatChannel', jsonObj);
+    }
 
     var jsTime = input.setJSON(jsonObj.KeyFrames.Time).readBufferArray();
     var jsKeyX = input.setJSON(jsonObj.KeyFrames.Key[0]).readBufferArray();
@@ -137,8 +140,9 @@ osgAnimationWrapper.StandardFloatChannel = function(input, channel, creator) {
         !jsonObj.Name ||
         !jsonObj.KeyFrames.Time ||
         !jsonObj.KeyFrames.Key
-    )
-        return P.reject();
+    ) {
+        return rejectObject('StandardFloatChannel', jsonObj);
+    }
 
     var jsTime = input.setJSON(jsonObj.KeyFrames.Time).readBufferArray();
     var jsKey = input.setJSON(jsonObj.KeyFrames.Key).readBufferArray();
@@ -190,8 +194,9 @@ osgAnimationWrapper.FloatCubicBezierChannel = function(input, channel) {
         !jsonObj.KeyFrames.Position ||
         !jsonObj.KeyFrames.ControlPointOut ||
         !jsonObj.KeyFrames.ControlPointIn
-    )
-        return P.reject();
+    ) {
+        return rejectObject('FloatCubicBezierChannel', jsonObj);
+    }
 
     var arrayPromise = [];
     var keyFrames = window.Object.keys(jsonObj.KeyFrames);
@@ -242,8 +247,9 @@ osgAnimationWrapper.Vec3CubicBezierChannel = function(input, channel) {
         jsonObj.KeyFrames.Position.length !== 3 ||
         jsonObj.KeyFrames.ControlPointIn.length !== 3 ||
         jsonObj.KeyFrames.ControlPointOut.length !== 3
-    )
-        return P.reject();
+    ) {
+        return rejectObject('Vec3CubicBezierChannel', jsonObj);
+    }
 
     var arrayPromise = [];
 
@@ -305,7 +311,7 @@ osgAnimationWrapper.Vec3CubicBezierChannel = function(input, channel) {
 
 osgAnimationWrapper.BasicAnimationManager = function(input, manager) {
     var jsonObj = input.getJSON();
-    if (!jsonObj.Animations) return P.reject();
+    if (!jsonObj.Animations) return rejectObject('BasicAnimationManager', jsonObj);
 
     osgWrapper.Object(input, manager);
 
@@ -314,7 +320,7 @@ osgAnimationWrapper.BasicAnimationManager = function(input, manager) {
     for (var i = 0, l = jsonObj.Animations.length; i < l; i++) {
         var promiseAnimation = input.setJSON(jsonObj.Animations[i]).readObject();
         if (promiseAnimation.isRejected()) {
-            Notify.warn('An Animation failed on the parsing!');
+            notify.warn('An Animation failed on the parsing!');
             continue;
         }
         animPromises.push(promiseAnimation);
@@ -329,7 +335,9 @@ osgAnimationWrapper.BasicAnimationManager = function(input, manager) {
 osgAnimationWrapper.UpdateMatrixTransform = function(input, umt) {
     var jsonObj = input.getJSON();
     //  some stackedTransform on bones has no name but the transform is usefull
-    if (/*!jsonObj.Name ||*/ !jsonObj.StackedTransforms) return P.reject();
+    if (/*!jsonObj.Name ||*/ !jsonObj.StackedTransforms) {
+        return rejectObject('UpdateMatrixTransform', jsonObj);
+    }
 
     osgWrapper.Object(input, umt);
 
@@ -338,7 +346,7 @@ osgAnimationWrapper.UpdateMatrixTransform = function(input, umt) {
     for (i = 0, l = jsonObj.StackedTransforms.length; i < l; i++) {
         var promiseStacked = input.setJSON(jsonObj.StackedTransforms[i]).readObject();
         if (promiseStacked.isRejected()) {
-            Notify.warn('A stacked transforms failed on the parsing!');
+            notify.warn('A stacked transforms failed on the parsing!');
             continue;
         }
         promiseArray.push(promiseStacked);
@@ -356,7 +364,7 @@ osgAnimationWrapper.UpdateMatrixTransform = function(input, umt) {
 
 osgAnimationWrapper.StackedTranslate = function(input, st) {
     var jsonObj = input.getJSON();
-    if (!jsonObj.Name || !jsonObj.Translate) return P.reject();
+    if (!jsonObj.Name || !jsonObj.Translate) return rejectObject('StackedTranslate', jsonObj);
 
     osgWrapper.Object(input, st);
 
@@ -367,7 +375,7 @@ osgAnimationWrapper.StackedTranslate = function(input, st) {
 
 osgAnimationWrapper.StackedQuaternion = function(input, st) {
     var jsonObj = input.getJSON();
-    if (!jsonObj.Name || !jsonObj.Quaternion) return P.reject();
+    if (!jsonObj.Name || !jsonObj.Quaternion) return rejectObject('StackedQuaternion', jsonObj);
 
     osgWrapper.Object(input, st);
 
@@ -378,7 +386,9 @@ osgAnimationWrapper.StackedQuaternion = function(input, st) {
 
 osgAnimationWrapper.StackedRotateAxis = function(input, st) {
     var jsonObj = input.getJSON();
-    if (!jsonObj.Axis || jsonObj.Angle === undefined) return P.reject();
+    if (!jsonObj.Axis || jsonObj.Angle === undefined) {
+        return rejectObject('StackedRotateAxis', jsonObj);
+    }
 
     osgWrapper.Object(input, st);
 
@@ -389,7 +399,7 @@ osgAnimationWrapper.StackedRotateAxis = function(input, st) {
 
 osgAnimationWrapper.StackedMatrix = function(input, sme) {
     var jsonObj = input.getJSON();
-    if (!jsonObj.Name || !jsonObj.Matrix) return P.reject();
+    if (!jsonObj.Name || !jsonObj.Matrix) return rejectObject('StackedMatrix', jsonObj);
 
     osgWrapper.Object(input, sme);
 
@@ -400,7 +410,7 @@ osgAnimationWrapper.StackedMatrix = function(input, sme) {
 
 osgAnimationWrapper.StackedScale = function(input, stc) {
     var jsonObj = input.getJSON();
-    if (!jsonObj.Name || !jsonObj.Scale) return P.reject();
+    if (!jsonObj.Name || !jsonObj.Scale) return rejectObject('StackedScale', jsonObj);
 
     osgWrapper.Object(input, stc);
 
@@ -411,7 +421,7 @@ osgAnimationWrapper.StackedScale = function(input, stc) {
 
 osgAnimationWrapper.Bone = function(input, bone) {
     var jsonObj = input.getJSON();
-    if (!jsonObj.InvBindMatrixInSkeletonSpace) return P.reject();
+    if (!jsonObj.InvBindMatrixInSkeletonSpace) return rejectObject('Bone', jsonObj);
 
     var promise = osgWrapper.MatrixTransform(input, bone);
 
@@ -440,9 +450,9 @@ osgAnimationWrapper.RigGeometry = function(input, rigGeom) {
     var jsonObj = input.getJSON();
 
     // check boneMap
-    if (!jsonObj.SourceGeometry) return P.reject();
+    if (!jsonObj.SourceGeometry) return rejectObject('RigGeometry', jsonObj);
 
-    if (!jsonObj.BoneMap) Notify.warn('No boneMap found in a RigGeometry !');
+    if (!jsonObj.BoneMap) notify.warn('No boneMap found in a RigGeometry !');
 
     //Import rigGeometry as Geometry + BoneMap
     var rigPromise = osgWrapper.Geometry(input, rigGeom);
@@ -462,7 +472,7 @@ osgAnimationWrapper.RigGeometry = function(input, rigGeom) {
             rigGeom.setSourceGeometry(new MorphGeometry());
             geomPromise = osgAnimationWrapper.MorphGeometry(input, rigGeom.getSourceGeometry());
         } else {
-            Notify.warn('SourceGeometry type no recognized');
+            notify.warn('SourceGeometry type no recognized');
         }
     }
 
@@ -478,7 +488,7 @@ osgAnimationWrapper.RigGeometry = function(input, rigGeom) {
 osgAnimationWrapper.MorphGeometry = function(input, morphGeometry) {
     var jsonObj = input.getJSON();
 
-    if (!jsonObj.MorphTargets) return P.reject();
+    if (!jsonObj.MorphTargets) return rejectObject('MorphGeometry', jsonObj);
 
     var morphTargets = jsonObj.MorphTargets;
     var arrayPromise = [];
@@ -503,7 +513,7 @@ osgAnimationWrapper.MorphGeometry = function(input, morphGeometry) {
 
 osgAnimationWrapper.UpdateMorph = function(input, updateMorph) {
     var jsonObj = input.getJSON();
-    if (!jsonObj.TargetMap) return P.reject();
+    if (!jsonObj.TargetMap) return rejectObject('UpdateMorph', jsonObj);
 
     osgWrapper.Object(input, updateMorph);
 
@@ -519,4 +529,4 @@ osgAnimationWrapper.UpdateMorph = function(input, updateMorph) {
 osgAnimationWrapper.StackedMatrixElement = osgAnimationWrapper.StackedMatrix;
 osgAnimationWrapper.StackedScaleElement = osgAnimationWrapper.StackedScale;
 
-module.exports = osgAnimationWrapper;
+export default osgAnimationWrapper;

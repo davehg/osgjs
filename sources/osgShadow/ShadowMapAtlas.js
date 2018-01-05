@@ -1,15 +1,14 @@
-'use strict';
-var notify = require('osg/notify');
-var vec4 = require('osg/glMatrix').vec4;
-var Camera = require('osg/Camera');
-var MACROUTILS = require('osg/Utils');
-var ShadowTechnique = require('osgShadow/ShadowTechnique');
-var ShadowTextureAtlas = require('osgShadow/ShadowTextureAtlas');
-var ShadowMap = require('osgShadow/ShadowMap');
-var Texture = require('osg/Texture');
-var FrameBufferObject = require('osg/FrameBufferObject');
-var Uniform = require('osg/Uniform');
-var Viewport = require('osg/Viewport');
+import notify from 'osg/notify';
+import { vec4 } from 'osg/glMatrix';
+import Camera from 'osg/Camera';
+import utils from 'osg/utils';
+import ShadowTechnique from 'osgShadow/ShadowTechnique';
+import ShadowTextureAtlas from 'osgShadow/ShadowTextureAtlas';
+import ShadowMap from 'osgShadow/ShadowMap';
+import Texture from 'osg/Texture';
+import FrameBufferObject from 'osg/FrameBufferObject';
+import Uniform from 'osg/Uniform';
+import Viewport from 'osg/Viewport';
 
 /**
  *  ShadowMapAtlas provides an implementation of shadow textures.
@@ -58,12 +57,13 @@ var ShadowMapAtlas = function(settings) {
     this._cameraClear.setRenderOrder(Camera.PRE_RENDER, 0);
     this._cameraClear.setClearColor(vec4.fromValues(1.0, 1.0, 1.0, 1.0));
     this._cameraClear.setFrameBufferObject(new FrameBufferObject());
+    this._cameraClear.setClearMask(0x0);
 };
 
 /** @lends ShadowMapAtlas.prototype */
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ShadowMapAtlas,
-    MACROUTILS.objectInherit(ShadowTechnique.prototype, {
+    utils.objectInherit(ShadowTechnique.prototype, {
         getTexture: function() {
             return this._texture;
         },
@@ -269,7 +269,6 @@ MACROUTILS.createPrototypeObject(
                     this._shadowedScene = shadowMap.getShadowedScene(this._shadowedScene);
                 if (this._shadowedScene) shadowMap.setShadowedScene(this._shadowedScene);
                 shadowMap.init(this._texture, i, this._textureUnitBase);
-                shadowMap.getCamera().setClearMask(0x0);
             }
         },
 
@@ -301,12 +300,6 @@ MACROUTILS.createPrototypeObject(
                     this._lights[i].getLightNumber(),
                     this._viewportDimension[i]
                 );
-
-                if (this._viewportDimension.length <= i) {
-                    this._viewportDimension.push(vec4.fromValues(x, y, mapSizeX, mapSizeY));
-                } else {
-                    vec4.set(this._viewportDimension[i], x, y, mapSizeX, mapSizeY);
-                }
 
                 shadowMap.dirty();
             }
@@ -345,12 +338,9 @@ MACROUTILS.createPrototypeObject(
 
         updateShadowTechnique: function(nv) {
             this.updateCameraClear();
+            var fbo = this._cameraClear.getFrameBufferObject();
             for (var i = 0, l = this._shadowMaps.length; i < l; i++) {
-                this._shadowMaps[i].updateShadowTechnique(
-                    nv,
-                    this._viewportDimension[i],
-                    this._cameraClear.getFrameBufferObject()
-                );
+                this._shadowMaps[i].updateShadowTechnique(nv, this._viewportDimension[i], fbo);
             }
         },
 
@@ -388,8 +378,33 @@ MACROUTILS.createPrototypeObject(
             this._cameraClear.accept(cullVisitor);
 
             for (var i = 0, l = this._shadowMaps.length; i < l; i++) {
-                this._shadowMaps[i].cullShadowCasting(cullVisitor, bbox);
+                var shadowMap = this._shadowMaps[i];
+                if (shadowMap.isContinuousUpdate() || shadowMap.needRedraw()) {
+                    shadowMap.cullShadowCasting(cullVisitor, bbox);
+                }
             }
+        },
+
+        isContinuousUpdate: function() {
+            // need at least one shadow to be enabled
+            // so that shadowedScene will continue shadowCasting
+            for (var i = 0, l = this._shadowMaps.length; i < l; i++) {
+                if (this._shadowMaps[i].isContinuousUpdate()) {
+                    return true;
+                }
+            }
+            return false;
+        },
+
+        needRedraw: function() {
+            // need at least one shadow not dirty
+            // so that shadowedScene will continue shadowCasting
+            for (var i = 0, l = this._shadowMaps.length; i < l; i++) {
+                if (this._shadowMaps[i].needRedraw()) {
+                    return true;
+                }
+            }
+            return false;
         },
 
         removeShadowMap: function(shadowMap) {
@@ -408,6 +423,10 @@ MACROUTILS.createPrototypeObject(
                     var light = shadowMap.getLight();
                     idx = this._lights.indexOf(light);
                     if (idx !== -1) this._lights.splice(idx, 1);
+
+                    if (this._viewportDimension.length > idx) {
+                        this._viewportDimension.splice(idx, 1);
+                    }
 
                     this.recomputeViewports();
                 }
@@ -464,7 +483,6 @@ MACROUTILS.createPrototypeObject(
             this._texture = undefined;
             this._shadowedScene = undefined;
         },
-
         setDebug: function(enable, lightNum) {
             if (!lightNum) {
                 for (var i = 0, l = this._shadowMaps.length; i < l; i++) {
@@ -473,10 +491,15 @@ MACROUTILS.createPrototypeObject(
             } else {
                 this._shadowMaps[lightNum].setDebug(enable);
             }
+        },
+        markSceneAsNoShadow: function() {
+            for (var i = 0, l = this._shadowMaps.length; i < l; i++) {
+                this._shadowMaps[i].markSceneAsNoShadow();
+            }
         }
     }),
     'osgShadow',
     'ShadowMapAtlas'
 );
 
-module.exports = ShadowMapAtlas;
+export default ShadowMapAtlas;

@@ -1,23 +1,27 @@
-'use strict';
-var BoundingBox = require('osg/BoundingBox');
-var BoundingSphere = require('osg/BoundingSphere');
-var Camera = require('osg/Camera');
-var Geometry = require('osg/Geometry');
-var Light = require('osg/Light');
-var mat4 = require('osg/glMatrix').mat4;
-var MatrixMemoryPool = require('osg/MatrixMemoryPool');
-var MatrixTransform = require('osg/MatrixTransform');
-var NodeVisitor = require('osg/NodeVisitor');
-var Plane = require('osg/Plane');
-var MACROUTILS = require('osg/Utils');
+import BoundingBox from 'osg/BoundingBox';
+import BoundingSphere from 'osg/BoundingSphere';
+import Camera from 'osg/Camera';
+import Geometry from 'osg/Geometry';
+import Light from 'osg/Light';
+import { mat4 } from 'osg/glMatrix';
+import PooledResource from 'osg/PooledResource';
+import PooledArray from 'osg/PooledArray';
+import MatrixTransform from 'osg/MatrixTransform';
+import NodeVisitor from 'osg/NodeVisitor';
+import Plane from 'osg/Plane';
+import utils from 'osg/utils';
 
 /**
  * [ComputeFrustumBoundsVisitor get a scene bounds limited by a light and camera frustum]
  */
 var ComputeMultiFrustumBoundsVisitor = function() {
     NodeVisitor.call(this, NodeVisitor.TRAVERSE_ALL_CHILDREN);
-    this._matrixStack = [mat4.create()];
-    this._reservedMatrixStack = new MatrixMemoryPool();
+
+    this._pooledMatrix = new PooledResource(mat4.create);
+
+    this._matrixStack = new PooledArray();
+    this._matrixStack.push(mat4.IDENTITY);
+
     this._bb = new BoundingBox();
     this._bs = new BoundingSphere();
 };
@@ -25,9 +29,9 @@ var ComputeMultiFrustumBoundsVisitor = function() {
 /*
  * TODO: apply world matrix on the traverse instead of per node
  */
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ComputeMultiFrustumBoundsVisitor,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         reset: function(traversalMask, worldLightPos, cameraFrustum, cameraNearFar, lightFrustum) {
             this.setTraversalMask(traversalMask);
 
@@ -41,8 +45,9 @@ MACROUTILS.createPrototypeObject(
                 cameraNearFar ? 6 : 4
             );
 
-            this._reservedMatrixStack.reset();
-            this._matrixStack.length = 1;
+            this._pooledMatrix.reset();
+            this._matrixStack.reset();
+            this._matrixStack.push(mat4.IDENTITY);
             this._bb.init();
         },
 
@@ -78,9 +83,8 @@ MACROUTILS.createPrototypeObject(
         },
 
         applyTransform: function(transform) {
-            var matrix = this._reservedMatrixStack.get();
-            var stackLength = this._matrixStack.length;
-            mat4.copy(matrix, this._matrixStack[stackLength - 1]);
+            var matrix = this._pooledMatrix.getOrCreateObject();
+            mat4.copy(matrix, this._matrixStack.back());
             transform.computeLocalToWorldMatrix(matrix, this);
 
             var bs = this._bs;
@@ -115,8 +119,7 @@ MACROUTILS.createPrototypeObject(
         applyBoundingBox: (function() {
             var bbOut = new BoundingBox();
             return function(bbox) {
-                var stackLength = this._matrixStack.length;
-                var matrix = this._matrixStack[stackLength - 1];
+                var matrix = this._matrixStack.back();
                 if (mat4.exactEquals(matrix, mat4.IDENTITY)) {
                     this._bb.expandByBoundingBox(bbox);
                 } else if (bbox.valid()) {
@@ -134,8 +137,7 @@ MACROUTILS.createPrototypeObject(
                 return;
             } else if (typeID === Geometry.getTypeID()) {
                 var bs = this._bs;
-                var matrix = this._matrixStack[this._matrixStack.length - 1];
-                node.getBound().transformMat4(bs, matrix);
+                node.getBound().transformMat4(bs, this._matrixStack.back());
 
                 // camera cull
                 if (this._cameraFrustum.getCurrentMask() !== 0) {
@@ -174,4 +176,4 @@ MACROUTILS.createPrototypeObject(
     'ComputeMultiFrustumBoundsVisitor'
 );
 
-module.exports = ComputeMultiFrustumBoundsVisitor;
+export default ComputeMultiFrustumBoundsVisitor;

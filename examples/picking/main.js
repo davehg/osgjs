@@ -125,7 +125,7 @@
         return root;
     };
 
-    var myReservedMatrixStack = new osg.MatrixMemoryPool();
+    var myReservedMatrixStack = new osg.PooledResource(osg.mat4.create);
 
     var projectToScreen = (function() {
         var mat = osg.mat4.create();
@@ -145,7 +145,11 @@
             osg.mat4.mul(
                 mat,
                 mat,
-                osg.computeLocalToWorld(hit._nodePath.slice(1), true, myReservedMatrixStack.get())
+                osg.computeLocalToWorld(
+                    hit._nodePath.slice(1),
+                    true,
+                    myReservedMatrixStack.getOrCreateObject()
+                )
             );
 
             var pt = [0.0, 0.0, 0.0];
@@ -205,11 +209,17 @@
                 osg.computeLocalToWorld(
                     hits[0]._nodePath.slice(1),
                     true,
-                    myReservedMatrixStack.get()
+                    myReservedMatrixStack.getOrCreateObject()
                 )
             );
 
-            si.set(worldPoint, viewer.getSceneData().getBound().radius() * 0.1);
+            si.set(
+                worldPoint,
+                viewer
+                    .getSceneData()
+                    .getBound()
+                    .radius() * 0.1
+            );
             var iv = new osgUtil.IntersectionVisitor();
             iv.setIntersector(si);
             viewer.getSceneData().accept(iv);

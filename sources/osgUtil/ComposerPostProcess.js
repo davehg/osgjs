@@ -1,18 +1,18 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Node = require('osg/Node');
-var CullFace = require('osg/CullFace');
-var Depth = require('osg/Depth');
-var Texture = require('osg/Texture');
-var Uniform = require('osg/Uniform');
-var StateSet = require('osg/StateSet');
-var Camera = require('osg/Camera');
-var FrameBufferObject = require('osg/FrameBufferObject');
-var Viewport = require('osg/Viewport');
-var Program = require('osg/Program');
-var Shader = require('osg/Shader');
-var Shape = require('osg/shape');
-var TransformEnums = require('osg/transformEnums');
+import utils from 'osg/utils';
+import Node from 'osg/Node';
+import CullFace from 'osg/CullFace';
+import Depth from 'osg/Depth';
+import Texture from 'osg/Texture';
+import Uniform from 'osg/Uniform';
+import StateSet from 'osg/StateSet';
+import Camera from 'osg/Camera';
+import FrameBufferObject from 'osg/FrameBufferObject';
+import Viewport from 'osg/Viewport';
+import Program from 'osg/Program';
+import Shader from 'osg/Shader';
+import Shape from 'osg/shape';
+import TransformEnums from 'osg/transformEnums';
+import ShaderProcessor from 'osgShader/ShaderProcessor';
 
 /*
 This class creates a post-processing pipeline based on an user-defined list of passes and .glsl files.
@@ -117,10 +117,14 @@ var ComposerPostProcess = function() {
     // in case of dynamic resolution scaling : true will do a final upsampling
     // to full viewport size
     this._finalPassUpScaleToScreen = true;
+    // wrap uv stuffs
+    this._methodWrapUV = 0;
+    this._thresholdWrapUV = 1.0;
+    this._texInfos = undefined;
 
     this._screenWidth = this._screenHeight = 0;
 
-    this._shaderProcessor = undefined;
+    this._shaderProcessor = ShaderProcessor();
 
     this._feedbackData = {};
 
@@ -184,9 +188,9 @@ ComposerPostProcess.FragmentShader = [
     ''
 ].join('\n');
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ComposerPostProcess,
-    MACROUTILS.objectInherit(Node.prototype, {
+    utils.objectInherit(Node.prototype, {
         clear: function() {
             this._textures = {};
             this._internalPasses.length = 0;
@@ -396,66 +400,80 @@ MACROUTILS.createPrototypeObject(
         // each time a texture is sampled, the usage is decremented
         // when is reaches 0 it means that the texture won't be used anymore so it can be reused
         // besides the usage number, the divisor, internal type and the filtering of the texture are used to make sure it can safely be reused
-        _hasFreeTexture: function(name, filter, out) {
+        _hasFreeTexture: function(passName, filter, out) {
+            // passName that directly matches a texture name
+            if (passName === out.name && this._texturePool[passName]) {
+                return passName;
+            }
+
             if (out.immuable) {
-                return this._texturePool[name] !== undefined ? name : '';
+                return;
             }
 
             for (var key in this._texturePool) {
                 var poolTexture = this._texturePool[key];
 
-                if (
-                    poolTexture.reusable &&
-                    poolTexture.usage <= 0 &&
-                    poolTexture.texture.divisor === out.divisor &&
-                    poolTexture.texture.getInternalFormatType() === out.type
-                ) {
-                    if (poolTexture.usage === -1) {
-                        if (poolTexture.texture.getMinFilter() !== filter) {
-                            poolTexture.texture.setMinFilter(filter);
-                            poolTexture.texture.setMagFilter(filter);
-                        }
+                // not reusable (could be used after postprocess)
+                if (!poolTexture.reusable) continue;
 
-                        return key;
-                    } else {
-                        if (poolTexture.texture.getMinFilter() === filter) {
-                            return key;
-                        }
+                // still required for a future postprocess pass
+                if (poolTexture.usage > 0) continue;
+
+                // different resolution
+                if (poolTexture.texture.divisor !== out.divisor) continue;
+
+                // different type (/!\ important, we could change type runtime, that way we cause lot of memory)
+                if (poolTexture.texture.getInternalFormatType() !== out.type) continue;
+
+                // first usage
+                if (poolTexture.usage === -1) {
+                    if (poolTexture.texture.getMinFilter() !== filter) {
+                        poolTexture.texture.setMinFilter(filter);
+                        poolTexture.texture.setMagFilter(filter);
                     }
+
+                    return key;
+                }
+
+                // reuse
+                if (poolTexture.texture.getMinFilter() === filter) {
+                    return key;
                 }
             }
 
-            return '';
+            return;
         },
 
-        _setOrCreateTextureKey: function(usage, name, out) {
-            var isLinear = this._textures[name].filter === 'linear';
+        _setOrCreateTextureKey: function(usage, passName, out) {
+            var isLinear = this._textures[passName].filter === 'linear';
             var filterEnum = isLinear ? Texture.LINEAR : Texture.NEAREST;
 
-            var poolKey = this._hasFreeTexture(name, filterEnum, out);
-            if (poolKey === '') {
-                if (out.immuable) {
-                    poolKey = name;
-                } else {
-                    poolKey = 'key' + this._currentPoolIndex++;
-                }
-
-                this._texturePool[poolKey] = {
-                    usage: usage,
-                    texture: this._createTexture(name, out.divisor, out.type, filterEnum),
-                    immuable: out.immuable,
-                    reusable: out.reusable
-                };
-
-                if (out.divisor === -1) {
-                    this._texturePool[poolKey].width = out.width;
-                    this._texturePool[poolKey].height = out.height;
-                }
-            } else {
+            var poolKey = this._hasFreeTexture(passName, filterEnum, out);
+            if (poolKey) {
                 this._texturePool[poolKey].usage = usage;
+                this._textures[passName].key = poolKey;
+                return;
             }
 
-            this._textures[name].key = poolKey;
+            if (out.immuable) {
+                poolKey = passName;
+            } else {
+                poolKey = 'key' + this._currentPoolIndex++;
+            }
+
+            this._texturePool[poolKey] = {
+                usage: usage,
+                texture: this._createTexture(passName, out.divisor, out.type, filterEnum),
+                immuable: out.immuable,
+                reusable: out.reusable
+            };
+
+            if (out.divisor === -1) {
+                this._texturePool[poolKey].width = out.width;
+                this._texturePool[poolKey].height = out.height;
+            }
+
+            this._textures[passName].key = poolKey;
         },
 
         _addStateSet: function(pass, stateSet) {
@@ -528,97 +546,102 @@ MACROUTILS.createPrototypeObject(
             }
         },
 
-        build: function(userPasses) {
-            this._usages = {};
-            var usages = this._usages;
-            var passes = this._processUserPasses(userPasses);
+        _buildPass: function(index, passes) {
+            var pass = passes[index];
+            var passName = pass.out.name;
 
-            this._checkInferredParameters();
+            this._setOrCreateTextureKey(this._usages[passName], passName, pass.out);
 
-            for (var i = 0; i < passes.length; i++) {
-                var pass = passes[i];
-                var passName = pass.out.name;
+            var feedbackName = pass.out.name + 'FeedbackTexture';
 
-                this._setOrCreateTextureKey(usages[passName], passName, pass.out);
+            if (pass.feedbackLoop) {
+                this._setOrCreateTextureKey(this._usages[feedbackName], feedbackName, pass.out);
+            }
 
-                var feedbackName = pass.out.name + 'FeedbackTexture';
+            // internal pass (user texture)
+            if (!pass.funcs.length) {
+                var key = this._textures[passName].key;
+                this._userTextures[passName] = this._texturePool[key].texture;
+                return;
+            }
 
-                if (pass.feedbackLoop) {
-                    this._setOrCreateTextureKey(usages[feedbackName], feedbackName, pass.out);
+            var stateSet = new StateSet();
+            this._addStateSet(pass, stateSet);
+
+            var i;
+            for (i = 0; i < pass.uniforms.length; i++) {
+                stateSet.addUniform(pass.uniforms[i]);
+            }
+
+            var uniforms = [];
+
+            var previousTextureUnit = undefined;
+
+            for (i = 0; i < pass.textures.length; i++) {
+                var texInfo = pass.textures[i];
+
+                var isFeedback = texInfo.name === feedbackName;
+                if (!isFeedback && !this._externalTextures[texInfo.name]) {
+                    var poolKey = this._textures[texInfo.name].key;
+                    this._texturePool[poolKey].usage--;
                 }
 
-                // internal pass (user texture)
-                if (!pass.funcs.length) {
-                    var key = this._textures[passName].key;
-                    this._userTextures[passName] = this._texturePool[key].texture;
+                var unit = this._addTextureToStateSet(texInfo, stateSet, i, uniforms, isFeedback);
+                if (unit !== undefined) {
+                    previousTextureUnit = unit;
+                }
+
+                if (this._feedbackData[texInfo.name] === undefined) {
                     continue;
                 }
 
-                var stateSet = new StateSet();
-                this._addStateSet(pass, stateSet);
+                var nextPass = {
+                    stateSet: stateSet,
+                    textureUnit: i
+                };
 
-                var j;
-                for (j = 0; j < pass.uniforms.length; j++) {
-                    stateSet.addUniform(pass.uniforms[j]);
-                }
-
-                var uniforms = [];
-
-                var previousTextureUnit = undefined;
-
-                for (j = 0; j < pass.textures.length; j++) {
-                    var texInfo = pass.textures[j];
-
-                    var isFeedback = texInfo.name === feedbackName;
-                    if (!isFeedback && !this._externalTextures[texInfo.name]) {
-                        var poolKey = this._textures[texInfo.name].key;
-                        this._texturePool[poolKey].usage--;
-                    }
-
-                    var unit = this._addTextureToStateSet(
-                        texInfo,
-                        stateSet,
-                        j,
-                        uniforms,
-                        isFeedback
-                    );
-                    if (unit !== undefined) {
-                        previousTextureUnit = unit;
-                    }
-
-                    if (this._feedbackData[texInfo.name] === undefined) {
-                        continue;
-                    }
-
-                    var nextPass = {
-                        stateSet: stateSet,
-                        textureUnit: j
-                    };
-
-                    this._feedbackData[texInfo.name].nextPasses.push(nextPass);
-                }
-
-                var outputTexture = undefined;
-                if (i !== passes.length - 1) {
-                    var outputKey = this._textures[passName].key;
-                    outputTexture = this._texturePool[outputKey].texture;
-                }
-
-                this._addTextureUniforms('TextureOutput', outputTexture, stateSet, uniforms);
-
-                stateSet.setAttributeAndModes(this._createProgram(pass, uniforms));
-
-                if (pass.feedbackLoop) {
-                    this._feedbackData[passName] = this._createFeedbackLoopCameras(
-                        passName,
-                        stateSet,
-                        outputTexture,
-                        previousTextureUnit
-                    );
-                } else {
-                    this.addChild(this._createCamera(passName, stateSet, outputTexture));
-                }
+                this._feedbackData[texInfo.name].nextPasses.push(nextPass);
             }
+
+            var outputTexture = undefined;
+            if (index !== passes.length - 1) {
+                var outputKey = this._textures[passName].key;
+                outputTexture = this._texturePool[outputKey].texture;
+            }
+
+            this._addTextureUniforms('TextureOutput', outputTexture, stateSet, uniforms);
+
+            stateSet.setAttributeAndModes(this._createProgram(pass, uniforms));
+
+            if (pass.feedbackLoop) {
+                this._feedbackData[passName] = this._createFeedbackLoopCameras(
+                    passName,
+                    stateSet,
+                    outputTexture,
+                    previousTextureUnit
+                );
+            } else {
+                this.addChild(this._createCamera(passName, stateSet, outputTexture));
+            }
+        },
+
+        _buildGraphFromPasses: function(passes) {
+            for (var i = 0; i < passes.length; i++) {
+                this._buildPass(i, passes);
+            }
+        },
+
+        build: function(userPasses) {
+            this._usages = {};
+
+            // process array of passes
+            var passes = this._processUserPasses(userPasses);
+
+            // fallback on inferred information for srgb/rgbm/filter
+            this._checkInferredParameters(passes);
+
+            // create textures, cameras and shader
+            this._buildGraphFromPasses(passes);
 
             this.resize(this._screenWidth, this._screenHeight);
         },
@@ -801,8 +824,8 @@ MACROUTILS.createPrototypeObject(
                 pass.out.divisor = pass.out.divisor || 1.0;
 
                 pass.out.type = pass.out.type || Texture.UNSIGNED_BYTE;
-                pass.out.immuable = pass.out.immuable || false;
-                pass.out.reusable = pass.out.reusable || true;
+                if (pass.out.immuable === undefined) pass.out.immuable = false;
+                if (pass.out.reusable === undefined) pass.out.reusable = true;
 
                 if (pass.feedbackLoop || pass.out.divisor === -1) {
                     pass.out.immuable = true;
@@ -912,6 +935,10 @@ MACROUTILS.createPrototypeObject(
             var str = 'uniform sampler2D TextureInput;\n';
 
             var i;
+            for (i = 0; i < textures.length; i++) {
+                var tname = textures[i].uniformName || textures[i].name;
+                str += 'uniform sampler2D ' + tname + ';\n';
+            }
             for (i = 0; i < uniforms.length; i++) {
                 var uniform = uniforms[i];
                 str += 'uniform ' + uniform.getType() + ' ' + uniform.getName() + ';\n';
@@ -926,21 +953,61 @@ MACROUTILS.createPrototypeObject(
             return source;
         },
 
-        _extractTextures: function(file) {
-            var infos = {
+        setMethodWrapUV: function(method, threshold) {
+            // hook every texture call to handle viewport/texture ratio
+            // when reading out of texture assigned zone
+
+            // 0 - do nothing
+            // 1 - clamp uv
+            // 2 - black color
+            if (method !== undefined) this._methodWrapUV = method;
+            if (threshold !== undefined) this._thresholdWrapUV = threshold;
+            this._texInfos = undefined;
+        },
+
+        _getInfos: function() {
+            if (this._texInfos) return this._texInfos;
+
+            var bodySimple = 'texture2D(%tex, (uv) * %ratio)';
+            var bodyNearest =
+                'texture2D(%tex, (floor((uv) * %size) + 0.5) * %ratio / %size, -99999.0)';
+            var bodyBias = 'texture2D(%tex, (uv) * %ratio)';
+
+            // see setMethodWrapUV
+            var val = this._thresholdWrapUV.toExponential();
+            if (this._methodWrapUV === 1) {
+                var replaceValue = 'min(uv, 1.0 - ' + val + ' / %size.xy)';
+                bodySimple = bodySimple.replace(/(uv)/g, replaceValue);
+                bodyNearest = bodyNearest.replace(/(uv)/g, replaceValue);
+                bodyBias = bodyBias.replace(/(uv)/g, replaceValue);
+            } else if (this._methodWrapUV === 2) {
+                var prefix = 'step((uv).x, 1.0 - ' + val + ' / %size.x) *';
+                prefix += 'step((uv).y, 1.0 - ' + val + ' / %size.y) * ';
+                bodySimple = prefix + bodySimple;
+                bodyNearest = prefix + bodyNearest;
+                bodyBias = prefix + bodyBias;
+            }
+
+            this._texInfos = {
                 TEXTURE_2D: {
                     signature: 'TEXTURE_2D_%tex(uv)',
-                    body: 'texture2D(%tex, (uv) * %ratio)'
+                    body: bodySimple
                 },
                 TEXTURE_2D_NEAREST: {
                     signature: 'TEXTURE_2D_NEAREST_%tex(uv)',
-                    body: 'texture2D(%tex, (floor((uv) * %size) + 0.5) * %ratio / %size, -99999.0)'
+                    body: bodyNearest
                 },
                 TEXTURE_2D_BIAS: {
                     signature: 'TEXTURE_2D_BIAS_%tex(uv, bias)',
-                    body: 'texture2D(%tex, (uv) * %ratio, bias)'
+                    body: bodyBias
                 }
             };
+
+            return this._texInfos;
+        },
+
+        _extractTextures: function(file) {
+            var infos = this._getInfos();
 
             var lines = file.match(/TEXTURE_2D(?:_BIAS|_NEAREST)?_\w+\(/g);
             if (!lines) return {};
@@ -968,51 +1035,59 @@ MACROUTILS.createPrototypeObject(
 
             for (var i = 0; i < funcs.length; i++) {
                 var file = this._shaderProcessor.getShaderTextPure(funcs[i].file);
+                functionBodies += file + '\n';
+            }
 
-                var textureDefines = this._extractTextures(file);
-                if (collapsible) {
-                    textureDefines.TEXTURE_2D_TextureInput = {
-                        name: 'TextureInput',
-                        signature: 'TEXTURE_2D_%tex(uv)',
-                        body: 'texture2D(%tex, (uv) * %ratio)'
-                    };
+            // resolve pragma include
+            var includeList = ['functions.glsl']; // included in composer main shader
+            functionBodies = this._shaderProcessor.preprocess(functionBodies, 0, includeList);
+
+            var textureDefines = this._extractTextures(functionBodies);
+            if (collapsible) {
+                var tex2dInfo = this._getInfos().TEXTURE_2D;
+                textureDefines.TEXTURE_2D_TextureInput = {
+                    name: 'TextureInput',
+                    signature: tex2dInfo.signature,
+                    body: tex2dInfo.body
+                };
+            }
+
+            for (var key in textureDefines) {
+                if (defineKeys[key]) {
+                    continue;
                 }
 
-                for (var key in textureDefines) {
-                    if (defineKeys[key]) {
+                defineKeys[key] = true;
+
+                var defineInfo = textureDefines[key];
+                var texName = defineInfo.name;
+
+                var rgbm = false;
+                // check if the textures is rgbm
+                for (var j = 0; j < textures.length; j++) {
+                    var inTex = textures[j];
+                    if (inTex.uniformName !== texName) {
                         continue;
                     }
 
-                    defineKeys[key] = true;
-
-                    var defineInfo = textureDefines[key];
-                    var texName = defineInfo.name;
-
-                    var rgbm = false;
-                    for (var j = 0; j < textures.length; j++) {
-                        var inTex = textures[j];
-                        if (inTex.uniformName !== texName) {
-                            continue;
-                        }
-
-                        var tex = inTex && this._textures[inTex.name];
-                        if (tex) rgbm = tex.rgbm;
+                    var tex = this._textures[inTex.name];
+                    if (tex && tex.rgbm) {
+                        rgbm = tex.rgbm;
+                        break;
                     }
-
-                    var code = defineInfo.body;
-                    if (rgbm) code = 'vec4(decodeRGBM(' + code + ', uRGBMRange), 1.0)';
-                    code = '#define ' + defineInfo.signature + ' ' + code;
-
-                    // replace %stuff by uniform names
-                    var uName = this._getUniformName(texName);
-                    code = code.replace(/%size/g, uName + 'Size');
-                    code = code.replace(/%ratio/g, uName + 'Ratio');
-                    code = code.replace(/%tex/g, texName);
-
-                    colorSpacesDefines.push(code);
                 }
 
-                functionBodies += file + '\n';
+                var code = defineInfo.body;
+                if (rgbm) code = 'vec4(decodeRGBM(' + code + ', uRGBMRange), 1.0)';
+                code = '#define ' + defineInfo.signature + ' (' + code + ')';
+
+                // replace %stuff by uniform names
+                var uName = this._getUniformName(texName);
+                code = code.replace(/%size/g, uName + 'Size');
+                code = code.replace(/%ratio/g, uName + 'Ratio');
+                code = code.replace(/%tex/g, texName);
+
+                colorSpacesDefines.push(code);
             }
 
             source = source.replace('%texturesColorSpace%', colorSpacesDefines.join('\n'));
@@ -1057,8 +1132,6 @@ MACROUTILS.createPrototypeObject(
         _removeDuplicatedUniforms: function(source) {
             var lines = source.split('\n');
 
-            //var r = source.match(/uniform(?:\s+){1,}\w+(?:\s+){1,}\w+/g);
-
             var uniforms = {};
 
             var numLines = lines.length;
@@ -1102,11 +1175,9 @@ MACROUTILS.createPrototypeObject(
             source = source.replace('%name%', pass.out.name);
             source = this._removeDuplicatedUniforms(source);
 
+            var vertexSource = ComposerPostProcess.VertexShader.replace('%name%', pass.out.name);
             var program = new Program(
-                new Shader(
-                    Shader.VERTEX_SHADER,
-                    ComposerPostProcess.VertexShader.replace('%name%', pass.out.name)
-                ),
+                new Shader(Shader.VERTEX_SHADER, vertexSource),
                 new Shader(Shader.FRAGMENT_SHADER, source)
             );
 
@@ -1343,4 +1414,4 @@ MACROUTILS.createPrototypeObject(
     'ComposerPostProcess'
 );
 
-module.exports = ComposerPostProcess;
+export default ComposerPostProcess;

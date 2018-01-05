@@ -1,12 +1,14 @@
 (function() {
     'use strict';
 
+    var P = window.P;
     var OSG = window.OSG;
     var osg = OSG.osg;
     var osgDB = OSG.osgDB;
     var osgViewer = OSG.osgViewer;
     var osgShadow = OSG.osgShadow;
     var ExampleOSGJS = window.ExampleOSGJS;
+    var $ = window.$;
 
     //////////////////////
     /// The sample itself is in this object.
@@ -48,7 +50,7 @@
             exampleObj: this,
             shadowStatic: false,
             basicScene: false,
-
+            customShadow: 'default',
             logCamLight: function() {
                 var example = this.exampleObj;
                 var cam = example._viewer._manipulator;
@@ -359,6 +361,9 @@
             controller = gui.add(this._config, 'shadowStatic');
             controller.onChange(this.updateShadow.bind(this));
 
+            controller = gui.add(this._config, 'customShadow', ['default', 'debug', 'pcss']);
+            controller.onChange(this.updateShadow.bind(this));
+
             controller = gui.add(this._config, 'debugBounds');
             controller.onChange(this.updateShadow.bind(this));
 
@@ -380,7 +385,10 @@
             controller = gui.add(this._config, 'normalBias', 0.001, 1.0);
             controller.onChange(this.updateShadow.bind(this));
 
-            controller = gui.add(this._config, 'fov').min(0.0).max(180.0);
+            controller = gui
+                .add(this._config, 'fov')
+                .min(0.0)
+                .max(180.0);
             controller.onChange(this.updateShadow.bind(this));
 
             controller = gui.add(
@@ -392,6 +400,31 @@
 
             this._gui = gui;
         },
+
+        readShaders: function() {
+            // get shader processor
+
+            var promises = [
+                P.resolve($.get('debug.glsl')),
+                P.resolve($.get('pcss.glsl')),
+                P.resolve($.get('pcf.glsl'))
+            ];
+
+            // register shader to the shader processor
+            var allPromises = P.all(promises);
+            allPromises.then(
+                function(shaders) {
+                    this.shaderLib = {
+                        'debug.glsl': shaders[0],
+                        'pcss.glsl': shaders[1],
+                        'pcf.glsl': shaders[2]
+                    };
+                }.bind(this)
+            );
+
+            return allPromises;
+        },
+
         testFrustumIntersections: function() {
             if (this._config.frustumTest !== this._previousFrustumTest) {
                 var manip = this._viewer._manipulator;
@@ -660,7 +693,7 @@
             // remove all lights
             while (l--) {
                 var st = this._shadowTechnique[l];
-                st.setEnabled(!this._config.shadowStatic);
+                st.setContinuousUpdate(!this._config.shadowStatic);
             }
             if (this._config.shadowStatic) {
                 this._config.lightSpeed = '0.0';
@@ -756,6 +789,32 @@
             if (this._config.atlas && this._config.lightNum > 3) {
                 this._config.lightNum = 4;
             }
+
+            if (this._config.customShadow !== 'default') {
+                if (!this.shaderProcessor) {
+                    this.shaderProcessor = this._viewer
+                        .getState()
+                        .getShaderGeneratorProxy()
+                        .getShaderGenerator('default')
+                        .getShaderProcessor();
+
+                    this.shaderProcessor.addShaders(this.shaderLib);
+                }
+
+                // custom shader for shadow without normal offset
+                this._config.normalBias = undefined;
+                // tell that we want to extract a compiler shader node function
+                OSG.osgShader.nodeFactory.extractFunctions(
+                    this.shaderLib,
+                    this._config.customShadow + '.glsl'
+                );
+                var shaderGenerator = this._viewer
+                    .getState()
+                    .getShaderGeneratorProxy()
+                    .getShaderGenerator('default');
+                shaderGenerator.resetCache();
+            }
+
             this.updateShadowStatic();
 
             this.updateLightsAmbient();
@@ -1331,7 +1390,9 @@
         function() {
             osg.log(osg.WebGLCaps.instance().getWebGLParameters());
             var example = new Example();
-            example.run();
+            example.readShaders().then(function() {
+                example.run();
+            });
         },
         true
     );

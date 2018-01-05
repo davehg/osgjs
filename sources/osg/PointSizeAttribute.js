@@ -1,8 +1,6 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
-var Uniform = require('osg/Uniform');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
+import Uniform from 'osg/Uniform';
 
 var PointSizeAttribute = function(disable) {
     StateAttribute.call(this);
@@ -11,11 +9,13 @@ var PointSizeAttribute = function(disable) {
     this._pointSize = 1.0;
     // careful with this option if there is lines/triangles under the stateset
     this._circleShape = false;
+    this._dirtyHash = true;
+    this._hash = '';
 };
 
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     PointSizeAttribute,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'PointSize',
 
         cloneType: function() {
@@ -24,6 +24,7 @@ MACROUTILS.createPrototypeStateAttribute(
 
         setCircleShape: function(bool) {
             this._circleShape = bool;
+            this._dirtyHash = true;
         },
 
         isCircleShape: function() {
@@ -32,6 +33,7 @@ MACROUTILS.createPrototypeStateAttribute(
 
         setEnabled: function(state) {
             this._enable = state;
+            this._dirtyHash = true;
         },
 
         isEnabled: function() {
@@ -54,6 +56,14 @@ MACROUTILS.createPrototypeStateAttribute(
         },
 
         getHash: function() {
+            if (!this._dirtyHash) return this._hash;
+
+            this._hash = this._computeInternalHash();
+            this._dirtyHash = false;
+            return this._hash;
+        },
+
+        _computeInternalHash: function() {
             return (
                 this.getTypeMember() +
                 (this.isEnabled() ? '1' : '0') +
@@ -72,4 +82,4 @@ MACROUTILS.createPrototypeStateAttribute(
     'PointSizeAttribute'
 );
 
-module.exports = PointSizeAttribute;
+export default PointSizeAttribute;

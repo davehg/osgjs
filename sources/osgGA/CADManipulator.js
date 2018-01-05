@@ -1,18 +1,17 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Manipulator = require('osgGA/Manipulator');
-var IntersectionVisitor = require('osgUtil/IntersectionVisitor');
-var LineSegmentIntersector = require('osgUtil/LineSegmentIntersector');
-var PolytopeIntersector = require('osgUtil/PolytopeIntersector');
-var ComputeMatrixFromNodePath = require('osg/computeMatrixFromNodePath');
-var mat4 = require('osg/glMatrix').mat4;
-var vec2 = require('osg/glMatrix').vec2;
-var vec3 = require('osg/glMatrix').vec3;
-var quat = require('osg/glMatrix').quat;
-var CADManipulatorStandardMouseKeyboardController = require('osgGA/CADManipulatorStandardMouseKeyboardController');
-var CADManipulatorHammerController = require('osgGA/CADManipulatorHammerController');
-var DelayInterpolator = require('osgUtil/DelayInterpolator');
-var intersectionEnums = require('osgUtil/intersectionEnums');
+import utils from 'osg/utils';
+import Manipulator from 'osgGA/Manipulator';
+import IntersectionVisitor from 'osgUtil/IntersectionVisitor';
+import LineSegmentIntersector from 'osgUtil/LineSegmentIntersector';
+import PolytopeIntersector from 'osgUtil/PolytopeIntersector';
+import ComputeMatrixFromNodePath from 'osg/computeMatrixFromNodePath';
+import { mat4 } from 'osg/glMatrix';
+import { vec2 } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
+import { quat } from 'osg/glMatrix';
+import CADManipulatorStandardMouseKeyboardController from 'osgGA/CADManipulatorStandardMouseKeyboardController';
+import CADManipulatorHammerController from 'osgGA/CADManipulatorHammerController';
+import DelayInterpolator from 'osgUtil/DelayInterpolator';
+import intersectionEnums from 'osgUtil/intersectionEnums';
 
 /**
  *  CADManipulator
@@ -112,9 +111,9 @@ CADManipulator.AvailableControllerList = ['StandardMouseKeyboard', 'Hammer'];
 CADManipulator.ControllerList = ['StandardMouseKeyboard', 'Hammer'];
 
 /** @lends CADManipulator.prototype */
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     CADManipulator,
-    MACROUTILS.objectInherit(Manipulator.prototype, {
+    utils.objectInherit(Manipulator.prototype, {
         init: function() {
             this._distance = 25.0;
             this._target = vec3.create();
@@ -207,7 +206,7 @@ MACROUTILS.createPrototypeObject(
             var u = vec3.create();
             var result = mat4.create();
             return function(boundStrategy) {
-                var bs = this.getHomeBound(boundStrategy);
+                var bs = this.getHomeBoundingSphere(boundStrategy);
                 if (!bs) return;
                 this.setDistance(this.getHomeDistance(bs));
                 this.setTarget(bs.center());
@@ -556,4 +555,4 @@ MACROUTILS.createPrototypeObject(
 CADManipulator.StandardMouseKeyboard = CADManipulatorStandardMouseKeyboardController;
 CADManipulator.Hammer = CADManipulatorHammerController;
 
-module.exports = CADManipulator;
+export default CADManipulator;

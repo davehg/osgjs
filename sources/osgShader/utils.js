@@ -1,7 +1,6 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Notify = require('osg/notify');
-var Node = require('osgShader/node/Node');
+import utils from 'osg/utils';
+import notify from 'osg/notify';
+import Node from 'osgShader/node/Node';
 
 /*
 
@@ -132,7 +131,7 @@ var checkVariableType = function(vars, optionalPrefix) {
 };
 
 var callFunction = function(funcName, output, inputs) {
-    var osgShader = require('osgShader/osgShader');
+    var osgShader = require('osgShader/osgShader').default;
 
     var debug = [];
     var callString = '';
@@ -193,7 +192,10 @@ var extractSignature = function(option, signature) {
 
     // preSignature: "vec3 myFunction"
     var preSignature = signature.substring(0, openParen);
-    preSignature = preSignature.replace(/[\r\n|\r|\n]/g, '').trim().replace(/\s+/g, ' ');
+    preSignature = preSignature
+        .replace(/[\r\n|\r|\n]/g, '')
+        .trim()
+        .replace(/\s+/g, ' ');
 
     var splitPre = preSignature.split(/\s/);
     var firstWord = splitPre[0];
@@ -242,7 +244,10 @@ var extractSignature = function(option, signature) {
         if (!argi) continue;
 
         // cleanArg: "const in vec3 varIn"
-        var cleanArg = argi.trim().replace(/\s+/g, ' ').split('[')[0];
+        var cleanArg = argi
+            .trim()
+            .replace(/\s+/g, ' ')
+            .split('[')[0];
         var splits = cleanArg.split(/\s/);
         var nbSplits = splits.length;
 
@@ -283,17 +288,17 @@ var createNode = function(res, fileName) {
         this._missingArgs = false;
     };
 
-    var globalDeclare = '#pragma include "' + fileName + '"';
-    MACROUTILS.createPrototypeObject(
+    utils.createPrototypeObject(
         NodeCustom,
-        MACROUTILS.objectInherit(Node.prototype, {
+        utils.objectInherit(Node.prototype, {
             type: res.nodeName,
             signatures: [res.signature],
+            globalDeclare: '#pragma include "' + fileName + '"',
 
             checkInputsOutputs: function() {},
 
             globalFunctionDeclaration: function() {
-                return globalDeclare;
+                return this.globalDeclare;
             },
 
             addExtensions: function(exts) {
@@ -379,7 +384,7 @@ var createNode = function(res, fileName) {
 
                 if (!jsArg) {
                     var typeIn = glslArg.isOutput ? 'output' : 'input';
-                    Notify.error(
+                    notify.error(
                         'missing ' + typeIn + ' ' + glslArg.name + ' on NodeCustom ' + res.nodeName
                     );
                     this._missingArgs = true;
@@ -402,7 +407,7 @@ var createNode = function(res, fileName) {
                 var ret = signature.returnVariable && signature.returnVariable.name;
                 var returnOut = ret ? this._outputs[ret] : undefined;
                 if (ret && !returnOut) {
-                    Notify.error('missing output ' + ret + ' on NodeCustom ' + res.nodeName);
+                    notify.error('missing output ' + ret + ' on NodeCustom ' + res.nodeName);
                     this._missingArgs = true;
                 }
 
@@ -423,24 +428,38 @@ var createNode = function(res, fileName) {
     return NodeCustom;
 };
 
+var shaderNodeClassGlobal = {};
+
 var extractFunctions = function(shaderLib, fileName) {
-    var objOut = {};
     var signatures = shaderLib[fileName].split(/#pragma DECLARE_FUNCTION(.*)[\r\n|\r|\n]/);
     var nbSignatures = (signatures.length - 1) / 2;
+
+    var shaderNodeClassLocal = {};
     for (var i = 0; i < nbSignatures; ++i) {
         var result = extractSignature(signatures[i * 2 + 1], signatures[i * 2 + 2]);
-        var shaderNode = objOut[result.nodeName];
+        var nodeName = result.nodeName;
+        var shaderNode = shaderNodeClassLocal[nodeName];
         if (shaderNode) {
             shaderNode.prototype.signatures.push(result.signature);
-        } else {
-            objOut[result.nodeName] = createNode(result, fileName);
+            continue;
         }
+        // new shadernode in this local shaderLib
+        shaderNode = shaderNodeClassGlobal[nodeName];
+        if (shaderNode) {
+            // replace shader node globally
+            shaderNode.prototype.signatures = [result.signature];
+            shaderNode.prototype.globalDeclare = '#pragma include "' + fileName + '"';
+        } else {
+            shaderNode = createNode(result, fileName);
+        }
+        shaderNodeClassLocal[nodeName] = shaderNode;
+        shaderNodeClassGlobal[nodeName] = shaderNode;
     }
 
-    return objOut;
+    return shaderNodeClassLocal;
 };
 
-module.exports = {
+export default {
     callFunction: callFunction,
     checkVariableType: checkVariableType,
     sprintf: sprintf,

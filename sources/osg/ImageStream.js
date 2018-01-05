@@ -1,7 +1,6 @@
-'use strict';
-var P = require('bluebird');
-var MACROUTILS = require('osg/Utils');
-var Image = require('osg/Image');
+import P from 'bluebird';
+import utils from 'osg/utils';
+import Image from 'osg/Image';
 
 var ImageStream = function(video) {
     Image.call(this, video);
@@ -11,9 +10,9 @@ var ImageStream = function(video) {
 ImageStream.PAUSE = 0;
 ImageStream.PLAYING = 1;
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ImageStream,
-    MACROUTILS.objectInherit(Image.prototype, {
+    utils.objectInherit(Image.prototype, {
         isDirty: function() {
             return this._status === ImageStream.PLAYING; // video is dirty if playing
         },
@@ -73,4 +72,4 @@ MACROUTILS.createPrototypeObject(
     'ImageStream'
 );
 
-module.exports = ImageStream;
+export default ImageStream;

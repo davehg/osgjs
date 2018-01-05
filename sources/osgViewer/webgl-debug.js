@@ -1,7 +1,5 @@
 // jshint ignore: start
 
-'use strict';
-
 /*
  ** Copyright (c) 2012 The Khronos Group Inc.
  **
@@ -810,7 +808,7 @@ var WebGLDebugUtils = (function() {
             glEnums = {};
             enumStringToValue = {};
             for (var propertyName in ctx) {
-                if (typeof ctx[propertyName] == 'number') {
+                if (typeof ctx[propertyName] === 'number') {
                     glEnums[ctx[propertyName]] = propertyName;
                     enumStringToValue[propertyName] = ctx[propertyName];
                 }
@@ -1012,7 +1010,7 @@ var WebGLDebugUtils = (function() {
         // but wraps all functions.
         var wrapper = {};
         for (var propertyName in ctx) {
-            if (typeof ctx[propertyName] == 'function') {
+            if (typeof ctx[propertyName] === 'function') {
                 if (propertyName != 'getExtension') {
                     wrapper[propertyName] = makeErrorWrapper(ctx, propertyName);
                 } else {
@@ -1196,7 +1194,7 @@ var WebGLDebugUtils = (function() {
         })(canvas.getContext);
 
         function wrapEvent(listener) {
-            if (typeof listener == 'function') {
+            if (typeof listener === 'function') {
                 return listener;
             } else {
                 return function(info) {
@@ -1394,7 +1392,7 @@ var WebGLDebugUtils = (function() {
         function makeLostContextSimulatingContext(ctx) {
             // copy all functions and properties to wrapper
             for (var propertyName in ctx) {
-                if (typeof ctx[propertyName] == 'function') {
+                if (typeof ctx[propertyName] === 'function') {
                     wrappedContext_[propertyName] = makeLostContextFunctionWrapper(
                         ctx,
                         propertyName
@@ -1719,4 +1717,4 @@ var WebGLDebugUtils = (function() {
     };
 })();
 
-module.exports = WebGLDebugUtils;
+export default WebGLDebugUtils;

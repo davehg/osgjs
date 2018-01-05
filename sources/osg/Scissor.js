@@ -1,6 +1,5 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
 
 var Scissor = function(x, y, w, h) {
     StateAttribute.call(this);
@@ -12,23 +11,13 @@ var Scissor = function(x, y, w, h) {
     this._height = h !== undefined ? h : -1;
 };
 
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     Scissor,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'Scissor',
 
         cloneType: function() {
             return new Scissor();
-        },
-
-        apply: function(state) {
-            var gl = state.getGraphicContext();
-            if (this._x !== -1) {
-                gl.enable(gl.SCISSOR_TEST);
-                gl.scissor(this._x, this._y, this._width, this._height);
-            } else {
-                gl.disable(gl.SCISSOR_TEST);
-            }
         },
 
         setScissor: function(x, y, width, height) {
@@ -52,10 +41,14 @@ MACROUTILS.createPrototypeStateAttribute(
 
         height: function() {
             return this._height;
+        },
+
+        apply: function(state) {
+            state.applyScissor(this);
         }
     }),
     'osg',
     'Scissor'
 );
 
-module.exports = Scissor;
+export default Scissor;

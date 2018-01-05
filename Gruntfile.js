@@ -1,4 +1,5 @@
 'use strict';
+/*eslint-env node*/
 
 var fs = require('fs');
 var path = require('path');
@@ -8,16 +9,19 @@ var webpackConfig = require('./webpack.config.js');
 var extend = require('extend');
 var glob = require('glob');
 
+var webpackSources = webpackConfig[0];
+var webpackTests = webpackConfig[1];
+
 // var jshintrc = JSON.parse( fs.readFileSync( './.jshintrc' ).toString() );
 
 // Base paths used by the tasks.
 // They always have to finish with a '/'.
-//
-var SOURCE_PATH = 'sources/';
-var EXAMPLE_PATH = 'examples/';
-var BUILD_PATH = 'builds/';
-var TEST_PATH = 'tests/';
-var BENCHMARK_PATH = 'benchmarks/';
+var ROOT_PATH = __dirname;
+var SOURCE_PATH = path.join(ROOT_PATH, 'sources/');
+var EXAMPLE_PATH = path.join(ROOT_PATH, 'examples/');
+var BUILD_PATH = path.join(ROOT_PATH, 'builds/');
+var TEST_PATH = path.join(ROOT_PATH, 'tests/');
+var BENCHMARK_PATH = path.join(ROOT_PATH, 'benchmarks/');
 var DIST_PATH = path.join(BUILD_PATH, 'dist/');
 
 var eslintConfigFilename = './.eslintrc.json';
@@ -92,61 +96,34 @@ var gruntTasks = {};
 (function() {
     var webpack = require('webpack');
 
-    var targets = {
-        build: {
-            devtool: 'source-map',
-            module: {
-                loaders: [
-                    {
-                        test: /\.js$/,
-                        loader: 'webpack-strip-block'
-                    }
-                ]
-            }
+    var release = {
+        devtool: 'none',
+        output: { filename: '[name].min.js' },
+
+        module: {
+            loaders: webpackSources.module.loaders.concat({
+                test: /\.js$/,
+                loader: 'webpack-strip-block'
+            })
         },
 
-        builddebug: {
-            devtool: 'eval-source-map'
-        },
+        // additional plugins for this specific mode
+        plugins: webpackSources.plugins.concat(
+            new webpack.optimize.UglifyJsPlugin({ sourceMap: false })
+        )
+    };
 
-        buildrelease: {
-            devtool: null,
-            output: {
-                path: DIST_PATH,
-                filename: '[name].min.js',
-                libraryTarget: 'umd',
-                library: 'OSG'
-            },
-
-            loaders: [
-                {
-                    test: /\.js$/,
-                    loader: 'webpack-strip-block'
-                }
-            ],
-            // additional plugins for this specific mode
-            plugins: [
-                new webpack.optimize.UglifyJsPlugin({
-                    sourceMap: false
-                })
-            ]
-        }
+    var watch = {
+        watch: true,
+        keepalive: true,
+        failOnError: false
     };
 
     gruntTasks.webpack = {
-        options: webpackConfig,
-        build: targets.build,
-        buildrelease: targets.buildrelease,
-        builddebug: targets.builddebug,
-        watch: {
-            entry: targets.build.entry,
-            devtool: targets.build.devtool,
-
-            // use webpacks watcher
-            // You need to keep the grunt process alive
-            watch: true,
-            keepalive: true
-        }
+        sources: webpackSources,
+        tests: webpackTests,
+        release: extend(true, {}, webpackSources, release),
+        watch: [extend({}, webpackSources, watch), extend({}, webpackTests, watch)]
     };
 })();
 
@@ -219,36 +196,6 @@ var gruntTasks = {};
     };
 })();
 
-function buildPrettierOptions(grunt) {
-    var filesList = [];
-    ['tests', 'examples', 'sources', 'self', 'benchmarks'].forEach(function(target) {
-        filesList = filesList.concat(gruntTasks.eslint[target].src);
-    });
-
-    var eslintConfigObject = grunt.file.readJSON(eslintConfigFilename);
-    var prettierConfig = eslintConfigObject.rules['prettier/prettier'][1];
-    var prettierOptions = ['--write'];
-
-    prettierOptions.push('--print-width', prettierConfig.printWidth);
-    if (prettierConfig.singleQuote) prettierOptions.push('--single-quote');
-    if (prettierConfig.tabWidth) prettierOptions.push('--tab-width', prettierConfig.tabWidth);
-    if (prettierConfig.jsxBracketSameLine) prettierOptions.push('--jsx-bracket-same-line');
-    if (prettierConfig.trailingComma)
-        prettierOptions.push('--trailing-comma', prettierConfig.trailingComma);
-    if (prettierConfig.bracketSpacing !== undefined)
-        prettierOptions.push('--bracket-spacing', prettierConfig.bracketSpacing);
-
-    Array.prototype.push.apply(prettierOptions, filesList);
-    var prettierArgs = prettierOptions;
-
-    gruntTasks.execute.prettier = {
-        options: {
-            args: prettierArgs
-        },
-        src: ['node_modules/.bin/prettier']
-    };
-}
-
 (function() {
     gruntTasks.execute = {
         test: {
@@ -257,6 +204,20 @@ function buildPrettierOptions(grunt) {
         bench: {
             src: ['benchmarks/runBenchmarks.js']
         }
+    };
+})();
+
+(function() {
+    var filesList = ['--write'];
+    ['tests', 'examples', 'sources', 'self', 'benchmarks'].forEach(function(target) {
+        filesList = filesList.concat(gruntTasks.eslint[target].src);
+    });
+
+    gruntTasks.execute.prettier = {
+        options: {
+            args: filesList
+        },
+        src: ['node_modules/.bin/prettier']
     };
 })();
 
@@ -431,11 +392,7 @@ function buildPrettierOptions(grunt) {
 })();
 
 module.exports = function(grunt) {
-    var distFullPath = path.normalize(path.join(__dirname, DIST_PATH)); // eslint-disable-line no-undef
-    grunt.file.mkdir(distFullPath);
-
-    // use same options as eslintrc for prettier
-    buildPrettierOptions(grunt);
+    grunt.file.mkdir(path.normalize(DIST_PATH));
 
     grunt.initConfig(
         extend(
@@ -478,9 +435,8 @@ module.exports = function(grunt) {
     grunt.registerTask('test', ['execute:test']);
     grunt.registerTask('benchmarks', ['execute:bench']);
 
-    grunt.registerTask('build', ['webpack:build']);
-    grunt.registerTask('build-release', ['webpack:buildrelease', 'copy:bundles']);
-    grunt.registerTask('build-debug', ['webpack:builddebug']);
+    grunt.registerTask('build', ['webpack:sources', 'webpack:tests']);
+    grunt.registerTask('build-release', ['webpack:release', 'copy:bundles']);
 
     grunt.registerTask('docs', ['plato', 'documentation:default']);
     grunt.registerTask('default', ['check', 'build']);

@@ -1,14 +1,13 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Object = require('osg/Object');
-var BoundingBox = require('osg/BoundingBox');
-var BoundingSphere = require('osg/BoundingSphere');
-var StateSet = require('osg/StateSet');
-var NodeVisitor = require('osg/NodeVisitor');
-var mat4 = require('osg/glMatrix').mat4;
-var MatrixMemoryPool = require('osg/MatrixMemoryPool');
-var ComputeMatrixFromNodePath = require('osg/computeMatrixFromNodePath');
-var TransformEnums = require('osg/transformEnums');
+import utils from 'osg/utils';
+import Object from 'osg/Object';
+import BoundingBox from 'osg/BoundingBox';
+import BoundingSphere from 'osg/BoundingSphere';
+import StateSet from 'osg/StateSet';
+import NodeVisitor from 'osg/NodeVisitor';
+import { mat4 } from 'osg/glMatrix';
+import PooledResource from 'osg/PooledResource';
+import ComputeMatrixFromNodePath from 'osg/computeMatrixFromNodePath';
+import TransformEnums from 'osg/transformEnums';
 
 /**
  *  Node that can contains child node
@@ -39,16 +38,16 @@ var Node = function() {
     this._tmpBox = new BoundingBox();
 };
 
-Node._reservedMatrixStack = new MatrixMemoryPool();
+var pooledMatrix = new PooledResource(mat4.create);
 var nodeGetMat = function() {
-    var mat = Node._reservedMatrixStack.get.bind(Node._reservedMatrixStack);
-    return mat4.identity(mat);
+    var matrix = pooledMatrix.getOrCreateObject();
+    return mat4.identity(matrix);
 };
 
 /** @lends Node.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     Node,
-    MACROUTILS.objectInherit(Object.prototype, {
+    utils.objectInherit(Object.prototype, {
         /**
       Return StateSet and create it if it does not exist yet
       @type StateSet
@@ -348,7 +347,7 @@ MACROUTILS.createPrototypeNode(
 
         computeBoundingBox: function(bbox) {
             // circular dependency... not sure if the global visitor instance should be instancied here
-            var ComputeBoundsVisitor = require('osg/ComputeBoundsVisitor');
+            var ComputeBoundsVisitor = require('osg/ComputeBoundsVisitor').default;
             var cbv = (ComputeBoundsVisitor.instance =
                 ComputeBoundsVisitor.instance || new ComputeBoundsVisitor());
             cbv.setNodeMaskOverride(~0x0); // traverse everything to be consistent with computeBoundingSphere
@@ -406,7 +405,7 @@ MACROUTILS.createPrototypeNode(
                 this.halt = undefined;
                 NodeVisitor.call(this, NodeVisitor.TRAVERSE_PARENTS);
             };
-            CollectParentPaths.prototype = MACROUTILS.objectInherit(NodeVisitor.prototype, {
+            CollectParentPaths.prototype = utils.objectInherit(NodeVisitor.prototype, {
                 reset: function() {
                     this.nodePath.length = 0;
                     this.nodePaths.length = 0;
@@ -459,7 +458,7 @@ MACROUTILS.createPrototypeNode(
                 mat4.copy(matrix, matrixList[0]);
             }
 
-            Node._reservedMatrixStack.reset();
+            pooledMatrix.reset();
             return matrix;
         },
 
@@ -521,4 +520,4 @@ MACROUTILS.createPrototypeNode(
     'Node'
 );
 
-module.exports = Node;
+export default Node;

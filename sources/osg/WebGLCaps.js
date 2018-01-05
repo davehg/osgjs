@@ -1,12 +1,11 @@
-'use strict';
-var Notify = require('osg/notify');
-var WebGLUtils = require('osgViewer/webgl-utils');
-var Options = require('osg/Options');
+import notify from 'osg/notify';
+import WebGLUtils from 'osgViewer/webgl-utils';
+import Options from 'osg/Options';
 var Texture;
 
 var WebGLCaps = function() {
     // circular deps with texture
-    if (!Texture) Texture = require('osg/Texture');
+    if (!Texture) Texture = require('osg/Texture').default;
 
     this._checkRTT = {};
     this._webGLExtensions = {};
@@ -39,7 +38,7 @@ var WebGLCaps = function() {
     this._gl = undefined;
 };
 
-WebGLCaps.instance = function(glParam) {
+WebGLCaps.instance = function(glParam, force) {
     if (!WebGLCaps._instance) {
         var oldWebGLInspector;
         var gl = glParam;
@@ -77,7 +76,7 @@ WebGLCaps.instance = function(glParam) {
             // like nodejs, phantomjs
             // warns but no error so that nodejs/phantomjs
             // can still has some webglcaps object
-            Notify.warn('no support for webgl context detected.');
+            notify.warn('no support for webgl context detected.');
         }
 
         if (oldWebGLInspector) {
@@ -87,8 +86,8 @@ WebGLCaps.instance = function(glParam) {
         //delete c;
     }
 
-    if (glParam && glParam !== WebGLCaps._instance.getContext()) {
-        // webgl caps called with a different context
+    if (glParam && (force || glParam !== WebGLCaps._instance.getContext())) {
+        // webgl caps called with a different context or GPU
         // than the one we draw in, will result on hard crash
         // when using extension from another context
         WebGLCaps._instance.initContextDependant(glParam);
@@ -111,7 +110,7 @@ WebGLCaps.prototype = {
             gl instanceof window.WebGL2RenderingContext;
         // Takes care of circular dependencies on Texture
         // Texture should be resolved at this point
-        // Texture = require( 'osg/Texture' );
+        // Texture = require('osg/Texture').default;
 
         // get extensions
         this.initWebGLExtensions(gl);
@@ -354,16 +353,18 @@ WebGLCaps.prototype = {
         //  ffx && chrome only
         var debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
         if (debugInfo) {
-            params.UNMASKED_RENDERER_WEBGL = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-            params.UNMASKED_VENDOR_WEBGL = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            params.UNMASKED_RENDERER_WEBGL = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            params.UNMASKED_VENDOR_WEBGL = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
         }
         // TODO ?
         // try to compile a small shader to test the spec is respected
     },
 
     applyExtension: function(gl, name) {
-        // Borrowed from https://webgl2fundamentals.org/webgl/lessons/webgl1-to-webgl2.html
         var ext = gl.getExtension(name);
+        // Borrowed from https://webgl2fundamentals.org/webgl/lessons/webgl1-to-webgl2.html
+        // make "generalized" functions and name
+        // so that can be used in webgl1 & wegbl2
         var suffix = name.split('_')[0];
         var prefix = '_' + suffix;
         var suffixRE = new RegExp(suffix + '$');
@@ -373,7 +374,7 @@ WebGLCaps.prototype = {
             if (typeof val === 'function') {
                 // remove suffix (eg: bindVertexArrayOES -> bindVertexArray)
                 var unsuffixedKey = key.replace(suffixRE, '');
-                if (key.substring) gl[unsuffixedKey] = ext[key].bind(ext);
+                if (gl[unsuffixedKey] === undefined) gl[unsuffixedKey] = ext[key].bind(ext);
             } else {
                 var unprefixedKey = key.replace(prefixRE, '');
                 if (gl[unprefixedKey] === undefined) gl[unprefixedKey] = ext[key];
@@ -397,6 +398,7 @@ WebGLCaps.prototype = {
         if (doFilter === undefined) doFilter = true;
 
         var supported = gl.getSupportedExtensions();
+        if (!supported) return;
         var ext = this._webGLExtensions;
         // we load all the extensions
         for (var i = 0, len = supported.length; i < len; ++i) {
@@ -421,4 +423,4 @@ WebGLCaps.prototype = {
     }
 };
 
-module.exports = WebGLCaps;
+export default WebGLCaps;

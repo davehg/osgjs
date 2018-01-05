@@ -1,14 +1,13 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var CullSettings = require('osg/CullSettings');
-var CullVisitor = require('osg/CullVisitor');
-var Object = require('osg/Object');
-var RenderStage = require('osg/RenderStage');
-var State = require('osg/State');
-var StateGraph = require('osg/StateGraph');
-var vec4 = require('osg/glMatrix').vec4;
-var osgShader = require('osgShader/osgShader');
-var DisplayGraph = require('osgUtil/DisplayGraph');
+import utils from 'osg/utils';
+import CullSettings from 'osg/CullSettings';
+import CullVisitor from 'osg/CullVisitor';
+import Object from 'osg/Object';
+import RenderStage from 'osg/RenderStage';
+import State from 'osg/State';
+import StateGraph from 'osg/StateGraph';
+import { vec4 } from 'osg/glMatrix';
+import osgShader from 'osgShader/osgShader';
+import DisplayGraph from 'osgUtil/DisplayGraph';
 
 var Renderer = function(camera) {
     Object.call(this);
@@ -27,9 +26,9 @@ var Renderer = function(camera) {
 
 Renderer.debugGraph = false;
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     Renderer,
-    MACROUTILS.objectInherit(Object.prototype, {
+    utils.objectInherit(Object.prototype, {
         setDefaults: function() {
             this._state = new State(new osgShader.ShaderGeneratorProxy());
 
@@ -40,7 +39,7 @@ MACROUTILS.createPrototypeObject(
             this.getCamera().setClearColor(vec4.create());
             this.setRenderStage(new RenderStage());
 
-            var osg = require('osg/osg');
+            var osg = require('osg/osg').default;
             var stateSet = this.getCamera().getOrCreateStateSet();
             stateSet.setAttributeAndModes(new osg.Material());
             stateSet.setAttributeAndModes(new osg.Depth());
@@ -105,7 +104,11 @@ MACROUTILS.createPrototypeObject(
 
             // this part of code should be called for each view
             // right now, we dont support multi view
+
+            // reset all stateGraph per frame
+            StateGraph.reset();
             this._stateGraph.clean();
+
             this._renderStage.reset();
 
             this._cullVisitor.reset();
@@ -137,7 +140,7 @@ MACROUTILS.createPrototypeObject(
             camera.getBound();
 
             var light = view.getLight();
-            var View = require('osgViewer/View');
+            var View = require('osgViewer/View').default;
 
             if (light) {
                 switch (view.getLightingMode()) {
@@ -154,12 +157,16 @@ MACROUTILS.createPrototypeObject(
                 }
             }
 
-            this._cullVisitor.pushViewport(camera.getViewport());
+            var viewport = camera.getViewport();
+            var scissor = camera.getScissor();
+
+            this._cullVisitor.pushViewport(viewport);
 
             this._renderStage.setClearDepth(camera.getClearDepth());
             this._renderStage.setClearColor(camera.getClearColor());
             this._renderStage.setClearMask(camera.getClearMask());
-            this._renderStage.setViewport(camera.getViewport());
+            this._renderStage.setViewport(viewport);
+            this._renderStage.setScissor(scissor);
 
             // pass de dbpager to the cullvisitor, so plod's can do the requests
             this._cullVisitor.setDatabaseRequestHandler(this._camera.getView().getDatabasePager());
@@ -210,4 +217,4 @@ MACROUTILS.createPrototypeObject(
     'Renderer'
 );
 
-module.exports = Renderer;
+export default Renderer;

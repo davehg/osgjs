@@ -1,11 +1,10 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Transform = require('osg/Transform');
-var CullSettings = require('osg/CullSettings');
-var mat4 = require('osg/glMatrix').mat4;
-var Texture = require('osg/Texture');
-var TransformEnums = require('osg/transformEnums');
-var vec4 = require('osg/glMatrix').vec4;
+import utils from 'osg/utils';
+import Transform from 'osg/Transform';
+import CullSettings from 'osg/CullSettings';
+import { mat4 } from 'osg/glMatrix';
+import Texture from 'osg/Texture';
+import TransformEnums from 'osg/transformEnums';
+import { vec4 } from 'osg/glMatrix';
 
 /**
  * Camera - is a subclass of Transform which represents encapsulates the settings of a Camera.
@@ -18,6 +17,7 @@ var Camera = function() {
 
     this.viewport = undefined;
     this._graphicContext = undefined;
+    this._scissor = undefined;
     this.setClearColor(vec4.fromValues(0, 0, 0, 1.0));
     this.setClearDepth(1.0);
 
@@ -44,11 +44,11 @@ Camera.DEPTH_BUFFER_BIT = 0x00000100;
 Camera.STENCIL_BUFFER_BIT = 0x00000400;
 
 /** @lends Camera.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     Camera,
-    MACROUTILS.objectInherit(
+    utils.objectInherit(
         CullSettings.prototype,
-        MACROUTILS.objectInherit(Transform.prototype, {
+        utils.objectInherit(Transform.prototype, {
             // at which view this camera is attached
             getView: function() {
                 return this._view;
@@ -125,6 +125,14 @@ MACROUTILS.createPrototypeNode(
             },
             getViewport: function() {
                 return this.viewport;
+            },
+
+            setScissor: function(scissor) {
+                this._scissor = scissor;
+                this.getOrCreateStateSet().setAttributeAndModes(this._scissor);
+            },
+            getScissor: function() {
+                return this._scissor;
             },
 
             setViewMatrix: function(matrix) {
@@ -241,4 +249,4 @@ MACROUTILS.createPrototypeNode(
     'Camera'
 );
 
-module.exports = Camera;
+export default Camera;

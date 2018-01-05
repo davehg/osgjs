@@ -1,4 +1,3 @@
-'use strict';
 var StackObjectPairPool = function() {
     this._globalDefault = undefined;
     this._lastApplied = undefined;
@@ -10,6 +9,9 @@ var StackObjectPairPool = function() {
 };
 
 StackObjectPairPool.prototype = {
+    getLength: function() {
+        return this._length;
+    },
     push: function(object, value) {
         var objectPair;
         if (this._length === this._values.length) {
@@ -32,4 +34,4 @@ StackObjectPairPool.prototype = {
         return objectPair;
     }
 };
-module.exports = StackObjectPairPool;
+export default StackObjectPairPool;

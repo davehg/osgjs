@@ -1,6 +1,4 @@
-'use strict';
-
-var Notify = require('osg/notify');
+import notify from 'osg/notify';
 
 /**
  * This is a very simplistic version of the OSG registry, we could
@@ -19,7 +17,7 @@ var Registry = {
     // We register directly a plugin for a extension.
     addReaderWriter: function(extension, plugin) {
         if (Registry.instance().plugins.get(extension) !== undefined)
-            Notify.warn("the '" + extension + "' plugin already exists");
+            notify.warn("the '" + extension + "' plugin already exists");
         Registry.instance().plugins.set(extension, plugin);
     },
 
@@ -28,4 +26,4 @@ var Registry = {
     }
 };
 
-module.exports = Registry;
+export default Registry;

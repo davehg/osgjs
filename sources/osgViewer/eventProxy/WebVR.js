@@ -1,9 +1,8 @@
-'use strict';
-var Notify = require('osg/notify');
-var quat = require('osg/glMatrix').quat;
-var vec3 = require('osg/glMatrix').vec3;
-var mat4 = require('osg/glMatrix').mat4;
-require('osgUtil/webvr-1-1'); // polyfill
+import notify from 'osg/notify';
+import { quat } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
+import { mat4 } from 'osg/glMatrix';
+import 'osgUtil/webvr-1-1'; // polyfill
 
 var WebVR = function(viewer) {
     this._viewer = viewer;
@@ -41,7 +40,7 @@ WebVR.prototype = {
             if (displays.length > 0) {
                 self._hmd = displays[0];
                 self._frameData = new window.VRFrameData();
-                Notify.log('Found a VR display');
+                notify.log('Found a VR display');
                 // currently it's the event proxy webvr that has the responsability of detecting vr devices
                 self._viewer.setVRDisplay(self._hmd);
             }
@@ -58,7 +57,8 @@ WebVR.prototype = {
         var manipulator = this._viewer.getManipulator();
         if (!manipulator) return false;
 
-        if (!manipulator.getControllerList()[this._type]) return false;
+        var controller = manipulator.getControllerList()[this._type];
+        if (!controller || !controller.isEnabled()) return false;
 
         if (!this._hmd) return false;
 
@@ -120,4 +120,4 @@ WebVR.prototype = {
         return this._hmd;
     }
 };
-module.exports = WebVR;
+export default WebVR;

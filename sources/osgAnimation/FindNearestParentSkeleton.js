@@ -1,7 +1,6 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var NodeVisitor = require('osg/NodeVisitor');
-var Skeleton = require('osgAnimation/Skeleton');
+import utils from 'osg/utils';
+import NodeVisitor from 'osg/NodeVisitor';
+import Skeleton from 'osgAnimation/Skeleton';
 
 /**
  * FindNearestParentSkeleton
@@ -15,9 +14,9 @@ var FindNearestParentSkeleton = function() {
     this._pathToRoot = undefined;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     FindNearestParentSkeleton,
-    MACROUTILS.objectInherit(NodeVisitor.prototype, {
+    utils.objectInherit(NodeVisitor.prototype, {
         apply: function(node) {
             if (this._root) return;
 
@@ -34,4 +33,4 @@ MACROUTILS.createPrototypeObject(
     'FindNearestParentSkeleton'
 );
 
-module.exports = FindNearestParentSkeleton;
+export default FindNearestParentSkeleton;

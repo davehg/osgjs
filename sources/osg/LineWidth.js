@@ -1,6 +1,5 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
 
 var LineWidth = function(lineWidth) {
     StateAttribute.call(this);
@@ -9,9 +8,9 @@ var LineWidth = function(lineWidth) {
         this.lineWidth = lineWidth;
     }
 };
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     LineWidth,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'LineWidth',
         cloneType: function() {
             return new LineWidth();
@@ -24,4 +23,4 @@ MACROUTILS.createPrototypeStateAttribute(
     'LineWidth'
 );
 
-module.exports = LineWidth;
+export default LineWidth;

@@ -1,7 +1,5 @@
-'use strict';
-
-var Light = require('osg/Light');
-var Notify = require('osg/notify');
+import Light from 'osg/Light';
+import notify from 'osg/notify';
 
 var CompilerFragment = {
     _createFragmentShader: function() {
@@ -12,8 +10,8 @@ var CompilerFragment = {
 
         var shader = this.createShaderFromGraphs(roots);
 
-        Notify.debug(this.getDebugIdentifier());
-        Notify.debug(shader);
+        notify.debug(this.getDebugIdentifier());
+        notify.debug(shader);
 
         this.cleanAfterFragment();
 
@@ -44,7 +42,7 @@ var CompilerFragment = {
     cleanAfterFragment: function() {
         // reset for next
         this._variables = {};
-        this._activeNodeList = {};
+        this._activeNodeMap = {};
 
         // clean texture cache variable (for vertex shader re-usage)
         for (var keyTexture in this._texturesByName) {
@@ -54,7 +52,7 @@ var CompilerFragment = {
         for (var keyVarying in this._varyings) {
             var varying = this._varyings[keyVarying];
             varying.reset();
-            this._activeNodeList[varying.getID()] = varying;
+            this._activeNodeMap[varying.getID()] = varying;
             this._variables[keyVarying] = varying;
         }
     },
@@ -62,7 +60,9 @@ var CompilerFragment = {
     createDefaultFragmentShaderGraph: function() {
         var fofd = this.getOrCreateConstant('vec4', 'fofd').setValue('vec4(1.0, 0.0, 1.0, 0.7)');
         var fragCol = this.getNode('glFragColor');
-        this.getNode('SetFromNode').inputs(fofd).outputs(fragCol);
+        this.getNode('SetFromNode')
+            .inputs(fofd)
+            .outputs(fragCol);
         return fragCol;
     },
 
@@ -83,14 +83,18 @@ var CompilerFragment = {
         var emission = this.getOrCreateMaterialEmission();
         if (emission) {
             var emit = this.createVariable('vec3');
-            this.getNode('Add').inputs(finalColor, emission).outputs(emit);
+            this.getNode('Add')
+                .inputs(finalColor, emission)
+                .outputs(emit);
             finalColor = emit;
         }
 
         var textureColor = this.getDiffuseColorFromTextures();
         if (textureColor) {
             var texColor = this.createVariable('vec3');
-            this.getNode('Mult').inputs(finalColor, textureColor).outputs(texColor);
+            this.getNode('Mult')
+                .inputs(finalColor, textureColor)
+                .outputs(texColor);
             finalColor = texColor;
         }
 
@@ -136,9 +140,12 @@ var CompilerFragment = {
             str += 'if ( %alpha == 0.0) discard;';
         }
 
-        this.getNode('InlineCode').code(str).inputs(inputs).outputs({
-            alpha: alpha
-        });
+        this.getNode('InlineCode')
+            .code(str)
+            .inputs(inputs)
+            .outputs({
+                alpha: alpha
+            });
 
         return alpha;
     },
@@ -149,12 +156,8 @@ var CompilerFragment = {
         out = this.createVariable('vec4', 'frontViewTangent');
 
         this.getNode('FrontNormal')
-            .inputs({
-                normal: this.getOrCreateVarying('vec4', 'vViewTangent')
-            })
-            .outputs({
-                result: out
-            });
+            .inputs({ normal: this.getOrCreateViewTangent() })
+            .outputs({ result: out });
 
         return out;
     },
@@ -165,12 +168,8 @@ var CompilerFragment = {
         out = this.createVariable('vec3', 'frontViewNormal');
 
         this.getNode('FrontNormal')
-            .inputs({
-                normal: this.getOrCreateVarying('vec3', 'vViewNormal')
-            })
-            .outputs({
-                result: out
-            });
+            .inputs({ normal: this.getOrCreateViewNormal() })
+            .outputs({ result: out });
 
         return out;
     },
@@ -181,20 +180,17 @@ var CompilerFragment = {
         out = this.createVariable('vec3', 'eyeVector');
 
         this.getNode('SetFromNode')
-            .inputs(this.getOrCreateVarying('vec4', 'vViewVertex'))
+            .inputs(this.getOrCreateViewVertex())
             .outputs(out);
 
         this.getNode('Normalize')
-            .inputs({
-                vec: out
-            })
-            .outputs({
-                result: out
-            });
+            .inputs({ vec: out })
+            .outputs({ result: out });
 
         this.getNode('Mult')
             .inputs(out, this.createVariable('float').setValue('-1.0'))
             .outputs(out);
+
         return out;
     },
 
@@ -204,12 +200,8 @@ var CompilerFragment = {
         out = this.createVariable('vec3', 'nFrontViewNormal');
 
         this.getNode('Normalize')
-            .inputs({
-                vec: this.getOrCreateFrontViewNormal()
-            })
-            .outputs({
-                result: out
-            });
+            .inputs({ vec: this.getOrCreateFrontViewNormal() })
+            .outputs({ result: out });
 
         return out;
     },
@@ -220,12 +212,8 @@ var CompilerFragment = {
         out = this.createVariable('vec3', 'frontModelNormal');
 
         this.getNode('FrontNormal')
-            .inputs({
-                normal: this.getOrCreateVarying('vec3', 'vModelNormal')
-            })
-            .outputs({
-                result: out
-            });
+            .inputs({ normal: this.getOrCreateModelNormal() })
+            .outputs({ result: out });
 
         return out;
     },
@@ -236,12 +224,8 @@ var CompilerFragment = {
         out = this.createVariable('vec3', 'nFrontModelNormal');
 
         this.getNode('Normalize')
-            .inputs({
-                vec: this.getOrCreateFrontModelNormal()
-            })
-            .outputs({
-                result: out
-            });
+            .inputs({ vec: this.getOrCreateFrontModelNormal() })
+            .outputs({ result: out });
 
         return out;
     },
@@ -252,13 +236,8 @@ var CompilerFragment = {
         var premultAlpha = this.createVariable('vec4');
 
         this.getNode('PreMultAlpha')
-            .inputs({
-                color: finalColor,
-                alpha: alpha
-            })
-            .outputs({
-                result: premultAlpha
-            });
+            .inputs({ color: finalColor, alpha: alpha })
+            .outputs({ result: premultAlpha });
 
         return premultAlpha;
     },
@@ -266,12 +245,8 @@ var CompilerFragment = {
     getColorsRGB: function(finalColor) {
         var finalSrgbColor = this.createVariable('vec3');
         this.getNode('LinearTosRGB')
-            .inputs({
-                color: finalColor
-            })
-            .outputs({
-                color: finalSrgbColor
-            });
+            .inputs({ color: finalColor })
+            .outputs({ color: finalSrgbColor });
 
         return finalSrgbColor;
     },
@@ -295,9 +270,7 @@ var CompilerFragment = {
                 hasVertexColor: vertexColorUniform,
                 vertexColor: vertexColor
             })
-            .outputs({
-                color: tmp
-            })
+            .outputs({ color: tmp })
             .comment('diffuse color = diffuse color * vertex color');
 
         return tmp;
@@ -320,7 +293,9 @@ var CompilerFragment = {
         if (texturesInput.length > 1) {
             var texAccum = this.createVariable('vec3', 'texDiffuseAccum');
 
-            this.getNode('Mult').inputs(texturesInput).outputs(texAccum);
+            this.getNode('Mult')
+                .inputs(texturesInput)
+                .outputs(texAccum);
             return texAccum;
         } else if (texturesInput.length === 1) {
             return texturesInput[0];
@@ -367,13 +342,15 @@ var CompilerFragment = {
         var inputs = {
             lighted: lighted,
             normalWorld: this.getOrCreateNormalizedFrontModelNormal(),
-            vertexWorld: this.getOrCreateVarying('vec3', 'vModelVertex'),
+            vertexWorld: this.getOrCreateModelVertex(),
             shadowTexture: this.getOrCreateSampler('sampler2D', 'Texture' + tUnit),
             shadowSize: this.getOrCreateUniform(textureUniforms['RenderSize']),
-            shadowProjectionMatrix: this.getOrCreateUniform(
-                textureUniforms['ProjectionMatrix' + suffix]
-            ),
-            shadowViewMatrix: this.getOrCreateUniform(textureUniforms['ViewMatrix' + suffix]),
+            shadowProjection: this.getOrCreateUniform(textureUniforms['Projection' + suffix]),
+
+            shadowViewRight: this.getOrCreateUniform(textureUniforms['ViewRight' + suffix]),
+            shadowViewUp: this.getOrCreateUniform(textureUniforms['ViewUp' + suffix]),
+            shadowViewLook: this.getOrCreateUniform(textureUniforms['ViewLook' + suffix]),
+
             shadowDepthRange: this.getOrCreateUniform(textureUniforms['DepthRange' + suffix]),
             shadowBias: this.getOrCreateUniform(shadowUniforms.bias)
         };
@@ -393,6 +370,10 @@ var CompilerFragment = {
         var distance = this.getVariable(varName);
         if (!distance) distance = this.createVariable('float', varName).setValue('0.0');
         return distance;
+    },
+
+    getOrCreateJitterShadow: function() {
+        return false;
     },
 
     hasLightShadow: function(lightNum) {
@@ -422,7 +403,15 @@ var CompilerFragment = {
             defines.push('#define _OUT_DISTANCE');
         }
 
-        this.getNode('ShadowReceive').inputs(inputs).outputs(outputs).addDefines(defines);
+        var doJitter = this.getOrCreateJitterShadow(lightNum);
+        if (doJitter) {
+            inputs.jitter = doJitter;
+        }
+
+        this.getNode('ShadowReceive')
+            .inputs(inputs)
+            .outputs(outputs)
+            .addDefines(defines);
 
         return shadowedOutput;
     },
@@ -465,7 +454,9 @@ var CompilerFragment = {
 
         var res = this.getLightingSeparate();
         var output = this.createVariable('vec3');
-        this.getNode('Add').inputs(res.diffuse, res.specular).outputs(output);
+        this.getNode('Add')
+            .inputs(res.diffuse, res.specular)
+            .outputs(output);
 
         return output;
     },
@@ -491,10 +482,14 @@ var CompilerFragment = {
             finalSpecular = specularSum[0];
         } else {
             finalDiffuse = this.createVariable('vec3');
-            this.getNode('Add').inputs(diffuseSum).outputs(finalDiffuse);
+            this.getNode('Add')
+                .inputs(diffuseSum)
+                .outputs(finalDiffuse);
 
             finalSpecular = this.createVariable('vec3');
-            this.getNode('Add').inputs(specularSum).outputs(finalSpecular);
+            this.getNode('Add')
+                .inputs(specularSum)
+                .outputs(finalSpecular);
         }
 
         return {
@@ -519,7 +514,9 @@ var CompilerFragment = {
 
         var ambient = this.getAmbientLight(light);
         if (ambient)
-            this.getNode('Add').inputs(outputs.diffuseOut, ambient).outputs(outputs.diffuseOut);
+            this.getNode('Add')
+                .inputs(outputs.diffuseOut, ambient)
+                .outputs(outputs.diffuseOut);
 
         return {
             diffuseOut: outputs.diffuseOut,
@@ -551,13 +548,13 @@ var CompilerFragment = {
         if (lightType === Light.POINT) {
             nodeName = 'PrecomputePoint';
 
-            inputs.viewVertex = this.getOrCreateVarying('vec4', 'vViewVertex');
+            inputs.viewVertex = this.getOrCreateViewVertex();
             inputs.lightAttenuation = this.getOrCreateUniform(lightUniforms.attenuation);
             inputs.lightViewPosition = this.getOrCreateUniform(lightUniforms.viewPosition);
         } else if (lightType === Light.SPOT) {
             nodeName = 'PrecomputeSpot';
 
-            inputs.viewVertex = this.getOrCreateVarying('vec4', 'vViewVertex');
+            inputs.viewVertex = this.getOrCreateViewVertex();
             inputs.lightViewDirection = this.getOrCreateUniform(lightUniforms.viewDirection);
             inputs.lightAttenuation = this.getOrCreateUniform(lightUniforms.attenuation);
             inputs.lightSpotCutOff = this.getOrCreateUniform(lightUniforms.spotCutOff);
@@ -568,7 +565,9 @@ var CompilerFragment = {
             inputs.lightViewDirection = this.getOrCreateUniform(lightUniforms.viewDirection);
         }
 
-        this.getNode(nodeName).inputs(inputs).outputs(outputs);
+        this.getNode(nodeName)
+            .inputs(inputs)
+            .outputs(outputs);
         return outputs;
     },
 
@@ -597,7 +596,10 @@ var CompilerFragment = {
         }
 
         var outputs = this.getOutputsFromLight();
-        this.getNode(nodeName).inputs(inputs).outputs(outputs);
+        this.getNode(nodeName)
+            .inputs(inputs)
+            .outputs(outputs);
+
         return outputs;
     },
 
@@ -605,7 +607,9 @@ var CompilerFragment = {
         var ambient = this.createVariable('vec3');
         var lightAmbient = this.getOrCreateUniform(light.getOrCreateUniforms().ambient);
         var materialAmbient = this.getOrCreateMaterialAmbient();
-        this.getNode('Mult').inputs(materialAmbient, lightAmbient).outputs(ambient);
+        this.getNode('Mult')
+            .inputs(materialAmbient, lightAmbient)
+            .outputs(ambient);
         return ambient;
     },
 
@@ -616,6 +620,10 @@ var CompilerFragment = {
             lighted: this.createVariable('bool')
         };
 
+        // the light glsl function always output this boolean
+        // even if no shadowmaping (so the variable ends up unused)
+        outputs.lighted.silenceWarning = true;
+
         return outputs;
     },
 
@@ -625,13 +633,8 @@ var CompilerFragment = {
 
         var texel = this.createVariable('vec4');
         this.getNode('TextureRGBA')
-            .inputs({
-                tex: textureSampler,
-                uv: texCoord
-            })
-            .outputs({
-                result: texel
-            });
+            .inputs({ tex: textureSampler, uv: texCoord })
+            .outputs({ result: texel });
 
         return texel;
     }
@@ -650,4 +653,4 @@ for (var fnName in CompilerFragment) {
     CompilerFragment[fnName] = wrapperFragmentOnly(CompilerFragment[fnName], fnName);
 }
 
-module.exports = CompilerFragment;
+export default CompilerFragment;

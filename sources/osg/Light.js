@@ -1,12 +1,10 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
-var Uniform = require('osg/Uniform');
-var mat3 = require('osg/glMatrix').mat3;
-var mat4 = require('osg/glMatrix').mat4;
-var vec3 = require('osg/glMatrix').vec3;
-var vec4 = require('osg/glMatrix').vec4;
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
+import Uniform from 'osg/Uniform';
+import { mat3 } from 'osg/glMatrix';
+import { mat4 } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
+import { vec4 } from 'osg/glMatrix';
 
 // use the same kind of opengl lights
 // see http://www.glprogramming.com/red/chapter05.html
@@ -38,6 +36,8 @@ var Light = function(lightNum, disable) {
     this._lightNumber = lightNumber;
 
     this._enable = !disable;
+    this._dirtyHash = true;
+    this._hash = '';
 };
 
 Light.DIRECTION = 'DIRECTION';
@@ -46,9 +46,9 @@ Light.POINT = 'POINT';
 Light.HEMI = 'HEMI';
 
 Light.uniforms = {};
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     Light,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'Light',
 
         cloneType: function() {
@@ -64,9 +64,16 @@ MACROUTILS.createPrototypeStateAttribute(
         },
 
         getHash: function() {
-            return this.getTypeMember() + this.getLightType() + this.isEnabled().toString();
+            if (!this._dirtyHash) return this._hash;
+
+            this._hash = this._computeInternalHash();
+            this._dirtyHash = false;
+            return this._hash;
         },
 
+        _computeInternalHash: function() {
+            return this.getTypeMember() + this.getLightType() + this.isEnabled().toString();
+        },
         getOrCreateUniforms: function() {
             var obj = Light;
             var typeMember = this.getTypeMember();
@@ -102,6 +109,7 @@ MACROUTILS.createPrototypeStateAttribute(
 
         setEnabled: function(bool) {
             this._enable = bool;
+            this._dirtyHash = true;
         },
 
         // colors
@@ -218,28 +226,33 @@ MACROUTILS.createPrototypeStateAttribute(
             vec3.set(this._direction, 0.0, 0.0, -1.0);
             this._ground[3] = -1.0;
             this._spotCutoff = 90;
+            this._dirtyHash = true;
         },
 
         setLightAsPoint: function() {
             vec4.set(this._position, 0.0, 0.0, 0.0, 1.0);
             vec3.set(this._direction, 0.0, 0.0, -1.0);
             this._ground[3] = -1.0;
+            this._dirtyHash = true;
         },
 
         setLightAsDirection: function() {
             vec4.set(this._position, 0.0, 0.0, 1.0, 0.0);
             this._spotCutoff = 180;
             this._ground[3] = -1.0;
+            this._dirtyHash = true;
         },
 
         setLightAsHemi: function() {
             vec4.set(this._position, 0.0, 0.0, 1.0, 0.0);
             this._spotCutoff = 180;
             this._ground[3] = 1.0;
+            this._dirtyHash = true;
         },
 
         setLightNumber: function(unit) {
             this._lightNumber = unit;
+            this._dirtyHash = true;
         },
 
         getLightNumber: function() {
@@ -303,4 +316,4 @@ MACROUTILS.createPrototypeStateAttribute(
     'Light'
 );
 
-module.exports = Light;
+export default Light;

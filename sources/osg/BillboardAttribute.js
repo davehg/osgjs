@@ -1,15 +1,14 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
 
 var BillboardAttribute = function() {
     StateAttribute.call(this);
     this._attributeEnable = false;
 };
 
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     BillboardAttribute,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'Billboard',
 
         cloneType: function() {
@@ -30,4 +29,4 @@ MACROUTILS.createPrototypeStateAttribute(
     'Billboard'
 );
 
-module.exports = BillboardAttribute;
+export default BillboardAttribute;

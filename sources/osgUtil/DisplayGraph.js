@@ -1,8 +1,6 @@
-'use strict';
-
-var DisplayGraphRenderer = require('osgUtil/DisplayGraphRenderer');
-var DisplayGraphNode = require('osgUtil/DisplayGraphNode');
-var Notify = require('osg/notify');
+import DisplayGraphRenderer from 'osgUtil/DisplayGraphRenderer';
+import DisplayGraphNode from 'osgUtil/DisplayGraphNode';
+import notify from 'osg/notify';
 
 var $;
 
@@ -10,7 +8,7 @@ var init$ = function() {
     try {
         $ = require('jquery');
     } catch (e) {
-        Notify.warn(
+        notify.warn(
             'You will not be able to use osgUtil.DisplayGraph until you add jQuery in your page'
         );
     }
@@ -61,7 +59,11 @@ SimpleTooltips.prototype = {
         this.el.innerHTML = target.getAttribute('title');
         this.el.style.display = 'block';
         this.el.style.left =
-            $(target).position().left + $(target).get(0).getBoundingClientRect().width + 'px';
+            $(target).position().left +
+            $(target)
+                .get(0)
+                .getBoundingClientRect().width +
+            'px';
         this.el.style.top = $(target).position().top + 'px';
     },
     hideTooltip: function() {
@@ -141,7 +143,7 @@ DisplayGraph.prototype = {
             this.displayGraph();
         } else {
             // circular dependency
-            require('osgViewer/Renderer').debugGraph = true;
+            require('osgViewer/Renderer').default.debugGraph = true;
         }
     },
 
@@ -252,9 +254,9 @@ DisplayGraph.prototype = {
         target.childNodes[0].style.fill = '#f00';
 
         window.activeNode = elt;
-        Notify.info('window.activeNode is set with the node below !');
-        Notify.log(window.activeNode);
-        Notify.log('\n');
+        notify.info('window.activeNode is set with the node below !');
+        notify.log(window.activeNode);
+        notify.log('\n');
 
         if (this._cbSelect) this._cbSelect(elt);
     },
@@ -292,4 +294,4 @@ DisplayGraph.prototype = {
     }
 };
 
-module.exports = DisplayGraph;
+export default DisplayGraph;

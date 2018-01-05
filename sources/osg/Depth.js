@@ -1,6 +1,5 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
 
 var Depth = function(func, near, far, writeMask) {
     StateAttribute.call(this);
@@ -38,9 +37,9 @@ Depth.NOTEQUAL = 0x0205;
 Depth.GEQUAL = 0x0206;
 Depth.ALWAYS = 0x0207;
 
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     Depth,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'Depth',
         cloneType: function() {
             return new Depth();
@@ -59,19 +58,11 @@ MACROUTILS.createPrototypeStateAttribute(
             return this._func;
         },
         apply: function(state) {
-            var gl = state.getGraphicContext();
-            if (this._func === 0) {
-                gl.disable(gl.DEPTH_TEST);
-            } else {
-                gl.enable(gl.DEPTH_TEST);
-                gl.depthFunc(this._func);
-                gl.depthMask(this._writeMask);
-                gl.depthRange(this._near, this._far);
-            }
+            state.applyDepth(this);
         }
     }),
     'osg',
     'Depth'
 );
 
-module.exports = Depth;
+export default Depth;

@@ -58,7 +58,6 @@
  * visible.
  */
 
-'use strict';
 var WebGLUtils = (function() {
     /**
      * Creates the HTLM for a failure message
@@ -227,7 +226,7 @@ if (!window.requestAnimationFrame) {
 }
 
 if (!window.cancelRequestAnimFrame) {
-    window.cancelRequestAnimFrame = (function() {
+    window.cancelAnimationFrame = (function() {
         return (
             window.cancelAnimationFrame ||
             window.webkitCancelRequestAnimationFrame ||
@@ -245,4 +244,4 @@ if (!Date.now) {
     };
 }
 
-module.exports = WebGLUtils;
+export default WebGLUtils;

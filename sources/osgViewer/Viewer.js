@@ -1,67 +1,28 @@
-'use strict';
-var Notify = require('osg/notify');
-var mat4 = require('osg/glMatrix').mat4;
-var Options = require('osg/Options');
-var P = require('bluebird');
-var Timer = require('osg/Timer');
-var TimerGPU = require('osg/TimerGPU');
-var UpdateVisitor = require('osg/UpdateVisitor');
-var MACROUTILS = require('osg/Utils');
-var Texture = require('osg/Texture');
-var OrbitManipulator = require('osgGA/OrbitManipulator');
-var EventProxy = require('osgViewer/eventProxy/eventProxy');
-var View = require('osgViewer/View');
-var WebGLUtils = require('osgViewer/webgl-utils');
-var WebGLDebugUtils = require('osgViewer/webgl-debug');
-var requestFile = require('osgDB/requestFile');
-var Stats = require('osgStats/Stats');
-var defaultStats = require('osgStats/defaultStats');
-var glStats = require('osgStats/glStats');
-var browserStats = require('osgStats/browserStats');
+import notify from 'osg/notify';
+import { mat4 } from 'osg/glMatrix';
+import Options from 'osg/Options';
+import P from 'bluebird';
+import Timer from 'osg/Timer';
+import TimerGPU from 'osg/TimerGPU';
+import UpdateVisitor from 'osg/UpdateVisitor';
+import utils from 'osg/utils';
+import GLObject from 'osg/GLObject';
+import FrameBufferObject from 'osg/FrameBufferObject';
+import BufferArray from 'osg/BufferArray';
+import VertexArrayObject from 'osg/VertexArrayObject';
+import Shader from 'osg/Shader';
+import Program from 'osg/Program';
+import Texture from 'osg/Texture';
+import OrbitManipulator from 'osgGA/OrbitManipulator';
+import EventProxy from 'osgViewer/eventProxy/eventProxy';
+import View from 'osgViewer/View';
+import WebGLUtils from 'osgViewer/webgl-utils';
+import WebGLDebugUtils from 'osgViewer/webgl-debug';
+import Stats from 'osgStats/Stats';
+import defaultStats from 'osgStats/defaultStats';
+import glStats from 'osgStats/glStats';
+import browserStats from 'osgStats/browserStats';
 
-var getGLSLOptimizer = function() {
-    return new P(function(resolve, reject) {
-        window.deferOptimizeGLSL = resolve;
-        var mod = [
-            '        var Module = {',
-            '            preRun: [],',
-            '            postRun: [ function () {',
-            '                var func = Module.cwrap( "optimize_glsl", "string", [ "string", "number", "number" ] );',
-            '                window.deferOptimizeGLSL( func );',
-            '            } ],',
-            '            print: function ( text ) {',
-            '                Notify.debug( text );',
-            '            },',
-            '            printErr: function ( text ) {',
-            '                Notify.debug( text );',
-            '            },',
-            '            setStatus: function ( text ) {',
-            '                Notify.debug( text );',
-            '            },',
-            '            totalDependencies: 0,',
-            '            monitorRunDependencies: function ( left ) {',
-            '                this.totalDependencies = Math.max( this.totalDependencies, left );',
-            '                Module.setStatus( left ? "GLSL optimizer preparing... (" + ( this.totalDependencies - left ) + "/" + this.totalDependencies + ")" : "All downloads complete." );',
-            '            },',
-            '            memoryInitializerPrefixURL: "https://raw.githubusercontent.com/zz85/glsl-optimizer/gh-pages/"',
-            '        };'
-        ].join('\n');
-
-        Notify.log('try to load glsl optimizer');
-        var url =
-            'https://raw.githubusercontent.com/zz85/glsl-optimizer/gh-pages/glsl-optimizer.js';
-        var promise = requestFile(url);
-        promise
-            .then(function(script) {
-                /*jshint evil: true */
-                eval(mod + script);
-                /*jshint evil: false */
-            })
-            .catch(function() {
-                reject();
-            });
-    });
-};
 
 var Viewer = function(canvas, userOptions, error) {
     View.call(this);
@@ -69,19 +30,17 @@ var Viewer = function(canvas, userOptions, error) {
     this._startTick = Timer.instance().tick();
     this._stats = undefined;
     this._done = false;
-    this._runPromise = P.resolve();
+
+    // keep reference so that you still have it
+    // when gl context is lost
+    this._canvas = canvas;
 
     var options = this.initOptions(userOptions);
     var gl = this.initWebGLContext(canvas, options, error);
 
     if (!gl) throw 'No WebGL implementation found';
 
-    // this MACROUTILS.init(); should be removed and replace by something
-    // more natural
-    MACROUTILS.init();
-
     this.initDeviceEvents(options, canvas);
-    this.initRun(options);
     this._updateVisitor = new UpdateVisitor();
 
     this.setUpView(gl.canvas, options);
@@ -89,13 +48,15 @@ var Viewer = function(canvas, userOptions, error) {
 
     this._hmd = null;
     this._requestAnimationFrame = window.requestAnimationFrame.bind(window);
-
+    this._options = options;
     this._contextLost = false;
+    this._forceRestoreContext = true;
+    this.renderBinded = this.render.bind(this);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     Viewer,
-    MACROUTILS.objectInherit(View.prototype, {
+    utils.objectInherit(View.prototype, {
         initDeviceEvents: function(options, canvas) {
             // default argument for mouse binding
             var defaultMouseEventNode = options.mouseEventNode || canvas;
@@ -115,6 +76,7 @@ MACROUTILS.createPrototypeObject(
                 eventsBackend.Hammer.eventNode =
                     eventsBackend.Hammer.eventNode || defaultMouseEventNode;
             }
+
             // gamepad
             eventsBackend.GamePad = eventsBackend.GamePad || {};
 
@@ -134,11 +96,14 @@ MACROUTILS.createPrototypeObject(
             options.extendWithOptionsURL();
 
             // Activate global trace on log call
-            if (options.getBoolean('traceLogCall') === true) Notify.traceLogCall = true;
+            if (options.getBoolean('traceLogCall') === true) notify.traceLogCall = true;
 
             // Check if Frustum culling is enabled to calculate the clip planes
             if (options.getBoolean('enableFrustumCulling') === true)
-                this.getCamera().getRenderer().getCullVisitor().setEnableFrustumCulling(true);
+                this.getCamera()
+                    .getRenderer()
+                    .getCullVisitor()
+                    .setEnableFrustumCulling(true);
 
             return options;
         },
@@ -148,15 +113,19 @@ MACROUTILS.createPrototypeObject(
             if (options.get('SimulateWebGLLostContext')) {
                 canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(canvas);
                 canvas.loseContextInNCalls(options.get('SimulateWebGLLostContext'));
+                this._canvas = canvas;
             }
 
             var gl = WebGLUtils.setupWebGL(canvas, options, error);
 
+            //www.khronos.org/registry/webgl/specs/latest/1.0/#WEBGLCONTEXTEVENT
             canvas.addEventListener(
                 'webglcontextlost',
                 function(event) {
                     this.contextLost();
-                    event.preventDefault();
+                    if (this._forceRestoreContext !== false) {
+                        event.preventDefault();
+                    }
                 }.bind(this),
                 false
             );
@@ -169,7 +138,7 @@ MACROUTILS.createPrototypeObject(
                 false
             );
 
-            if (Notify.reportWebGLError || options.get('reportWebGLError')) {
+            if (notify.reportWebGLError || options.get('reportWebGLError')) {
                 gl = WebGLDebugUtils.makeDebugContext(gl);
             }
 
@@ -179,50 +148,79 @@ MACROUTILS.createPrototypeObject(
             return gl;
         },
 
-        initRun: function(options) {
-            if (options.getBoolean('GLSLOptimizer') === true) {
-                var Shader = require('osg/Shader');
-                Shader.enableGLSLOptimizer = true;
-
-                this._runPromise = getGLSLOptimizer();
-                this._runPromise
-                    .then(function(glslOptimizer) {
-                        Shader.glslOptimizer = glslOptimizer;
-                        if (Shader.glslOptimizer)
-                            Notify.log('uses glsl optimizer, use ?log=info to see shader output');
-                        else Notify.error('failed to load glsl optimizer');
-                    })
-                    .catch(function(error) {
-                        Notify.error(error);
-                    });
-            }
-        },
-
-        setContextLostCallback: function(cb) {
-            this._contextLostCallback = cb;
+        // allow user to acknowledge the context lost
+        // (display a message, etc.)
+        // - callback return false: no attempt to restore
+        setContextLostCallback: function(callback) {
+            this._contextLostCallback = callback;
             // just in case callback registration
             // happens after the context lost
             if (this._contextLost) {
-                cb();
+                this._forceRestoreContext = callback();
             }
         },
 
+        setContextRestoreCallback: function(callback) {
+            this._contextRestoreCallback = callback;
+        },
+
         contextLost: function() {
-            Notify.log('webgl context lost');
+            notify.log('webgl context lost');
             if (this._contextLostCallback) {
-                this._contextLostCallback();
+                this._forceRestoreContext = this._contextLostCallback();
             }
             this._contextLost = true;
             window.cancelAnimationFrame(this._requestID);
         },
 
         contextRestored: function() {
-            Notify.log('webgl context restored, but not supported - reload the page');
-            // Supporting it implies to have
-            // reloaded all your resources:
-            // textures, vertex/index buffers, shaders, frame buffers
-            // so only set it back if you happen to have restored the context
-            // this._contextLost = false;
+            if (this._forceRestoreContext === false) {
+                notify.log('webgl context restore not supported - please reload the page - ');
+                return;
+            }
+            // restore is already async
+            // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
+            this.restoreContext();
+            notify.log('webgl context restored');
+        },
+
+        restoreContext: function() {
+            var gl = this.getGraphicContext();
+
+            Shader.onLostContext(gl);
+            Program.onLostContext(gl);
+            BufferArray.onLostContext(gl);
+            VertexArrayObject.onLostContext(gl);
+            FrameBufferObject.onLostContext(gl);
+            Texture.getTextureManager(gl).onLostContext(gl);
+
+            GLObject.onLostContext(gl);
+
+            this.getCamera()
+                .getRenderer()
+                .getState()
+                .resetCaches();
+
+            // if it's a different GPU, different webglcaps
+            this.initWebGLCaps(gl, true);
+            this.setGraphicContext(gl);
+
+            // different GPU caps means different timer caps
+            TimerGPU.instance(this.getGraphicContext(), true);
+            if (this._stats) {
+                // stats geometries needs special care
+                this._stats.reset();
+            }
+
+            // ready to draw again
+            this._contextLost = false;
+            this._requestRedraw = true;
+
+            // Warn users context has been restored
+            if (this._contextRestoreCallback) {
+                this._contextRestoreCallback(gl);
+            }
+            this._runImplementation();
         },
 
         init: function() {
@@ -234,7 +232,9 @@ MACROUTILS.createPrototypeObject(
         },
 
         getState: function() {
-            return this.getCamera().getRenderer().getState();
+            return this.getCamera()
+                .getRenderer()
+                .getState();
         },
 
         initStats: function(options) {
@@ -245,7 +245,7 @@ MACROUTILS.createPrototypeObject(
                 return;
             }
 
-            this._stats = new Stats(this.getCamera().getViewport(), options);
+            this._stats = new Stats(this, options);
             this._stats.addConfig(defaultStats);
             this._stats.addConfig(glStats);
             this._stats.addConfig(browserStats);
@@ -266,7 +266,10 @@ MACROUTILS.createPrototypeObject(
         renderingTraversal: function() {
             this.getState()._frameStamp = this._frameStamp;
 
-            if (this.getScene().getSceneData()) this.getScene().getSceneData().getBound();
+            if (this.getScene().getSceneData())
+                this.getScene()
+                    .getSceneData()
+                    .getBound();
 
             if (this.getCamera()) {
                 var stats = this._stats;
@@ -428,29 +431,19 @@ MACROUTILS.createPrototypeObject(
             return this._done;
         },
 
+        render: function() {
+            if (!this.done()) {
+                this._requestID = this._requestAnimationFrame(this.renderBinded, this._canvas);
+                this.frame();
+            }
+        },
+
         _runImplementation: function() {
-            var self = this;
-            var render = function() {
-                if (!self.done()) {
-                    self._requestID = self._requestAnimationFrame(
-                        render,
-                        self.getGraphicContext().canvas
-                    );
-                    self.frame();
-                }
-            };
-            render();
+            this.render();
         },
 
         run: function() {
-            var self = this;
-            this._runPromise
-                .then(function() {
-                    self._runImplementation();
-                })
-                .catch(function() {
-                    self._runImplementation();
-                });
+            this._runImplementation();
         },
 
         setVRDisplay: function(hmd) {
@@ -463,7 +456,7 @@ MACROUTILS.createPrototypeObject(
 
         setPresentVR: function(doPresentVR) {
             if (!this._hmd) {
-                Notify.warn('no hmd device provided to the viewer!');
+                notify.warn('no hmd device provided to the viewer!');
                 return P.reject();
             }
 
@@ -604,6 +597,15 @@ MACROUTILS.createPrototypeObject(
             View.prototype.setManipulator.call(this, manipulator);
         },
 
+        setEnableManipulator: function(bool) {
+            if (!this._manipulator) return;
+
+            var controllerMap = this._manipulator.getControllerList();
+            for (var name in controllerMap) {
+                controllerMap[name].setEnable(bool);
+            }
+        },
+
         removeEventProxy: function() {
             var list = this._eventProxy;
             for (var key in list) {
@@ -620,4 +622,4 @@ MACROUTILS.createPrototypeObject(
     'Viewer'
 );
 
-module.exports = Viewer;
+export default Viewer;

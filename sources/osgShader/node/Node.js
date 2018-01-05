@@ -1,5 +1,4 @@
-'use strict';
-var Notify = require('osg/notify');
+import notify from 'osg/notify';
 
 var instance = 0;
 var Node = function() {
@@ -53,7 +52,7 @@ Node.prototype = {
             for (i = 0; i < this.validInputs.length; i++) {
                 key = this.validInputs[i];
                 if (!this._inputs[key]) {
-                    Notify.error(
+                    notify.error(
                         'Shader node ' +
                             this.type +
                             ' validation error input ' +
@@ -69,7 +68,7 @@ Node.prototype = {
             for (i = 0; i < this.validOutputs.length; i++) {
                 key = this.validOutputs[i];
                 if (!this._outputs[key]) {
-                    Notify.error(
+                    notify.error(
                         'Shader node ' +
                             this.type +
                             ' validation error output ' +
@@ -93,7 +92,7 @@ Node.prototype = {
         for (var i = 0, l = arguments.length; i < l; i++) {
             var input = arguments[i];
             if (!input) {
-                Notify.error('Shader node ' + this.type + ' input number ' + l + ' is undefined ');
+                notify.error('Shader node ' + this.type + ' input number ' + l + ' is undefined ');
                 break;
             }
 
@@ -159,4 +158,4 @@ Node.prototype = {
     }
 };
 
-module.exports = Node;
+export default Node;

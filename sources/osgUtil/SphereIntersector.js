@@ -1,10 +1,8 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var vec3 = require('osg/glMatrix').vec3;
-var mat4 = require('osg/glMatrix').mat4;
-var Intersector = require('osgUtil/Intersector');
-var SphereIntersectFunctor = require('osgUtil/SphereIntersectFunctor');
+import utils from 'osg/utils';
+import { vec3 } from 'osg/glMatrix';
+import { mat4 } from 'osg/glMatrix';
+import Intersector from 'osgUtil/Intersector';
+import SphereIntersectFunctor from 'osgUtil/SphereIntersectFunctor';
 
 var SphereIntersector = function() {
     Intersector.call(this);
@@ -15,9 +13,9 @@ var SphereIntersector = function() {
     this._iRadius = 1.0;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     SphereIntersector,
-    MACROUTILS.objectInherit(Intersector.prototype, {
+    utils.objectInherit(Intersector.prototype, {
         set: function(center, radius) {
             // we copy iCenter and iRadius in case setCurrentTransformation is never called
             vec3.copy(this._center, center);
@@ -93,4 +91,4 @@ MACROUTILS.createPrototypeObject(
     'SphereIntersector'
 );
 
-module.exports = SphereIntersector;
+export default SphereIntersector;

@@ -1,19 +1,18 @@
-'use strict';
-var Notify = require('osg/notify');
-var MACROUTILS = require('osg/Utils');
-var Uniform = require('osg/Uniform');
-var BlendFunc = require('osg/BlendFunc');
-var Geometry = require('osg/Geometry');
-var BufferArray = require('osg/BufferArray');
-var primitiveSet = require('osg/primitiveSet');
-var DrawArrays = require('osg/DrawArrays');
-var DrawElements = require('osg/DrawElements');
-var StateSet = require('osg/StateSet');
-var Node = require('osg/Node');
-var mat4 = require('osg/glMatrix').mat4;
-var MatrixTransform = require('osg/MatrixTransform');
-var Projection = require('osg/Projection');
-var Registry = require('osgDB/Registry');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
+import Uniform from 'osg/Uniform';
+import BlendFunc from 'osg/BlendFunc';
+import Geometry from 'osg/Geometry';
+import BufferArray from 'osg/BufferArray';
+import primitiveSet from 'osg/primitiveSet';
+import DrawArrays from 'osg/DrawArrays';
+import DrawElements from 'osg/DrawElements';
+import StateSet from 'osg/StateSet';
+import Node from 'osg/Node';
+import { mat4 } from 'osg/glMatrix';
+import MatrixTransform from 'osg/MatrixTransform';
+import Projection from 'osg/Projection';
+import Registry from 'osgDB/Registry';
 
 var ReaderParser = {};
 
@@ -39,7 +38,7 @@ ReaderParser.readNodeURL = function(url, options) {
 };
 
 ReaderParser.registry = function() {
-    var Input = require('osgDB/Input');
+    var Input = require('osgDB/Input').default;
     if (ReaderParser.registry._input === undefined) {
         ReaderParser.registry._input = new Input();
     }
@@ -48,7 +47,7 @@ ReaderParser.registry = function() {
 
 ReaderParser.parseSceneGraph = function(node, options) {
     if (node.Version !== undefined && node.Version > 0) {
-        MACROUTILS.time('osgjs.metric:ReaderParser.parseSceneGraph');
+        utils.time('osgjs.metric:ReaderParser.parseSceneGraph', notify.INFO);
 
         var key;
         for (var prop in node) {
@@ -65,21 +64,21 @@ ReaderParser.parseSceneGraph = function(node, options) {
             input.setJSON(obj);
 
             // copy global options and override with user options
-            var opt = MACROUTILS.objectMix(
-                MACROUTILS.objectMix({}, ReaderParser.registry().getOptions()),
+            var opt = utils.objectMix(
+                utils.objectMix({}, ReaderParser.registry().getOptions()),
                 options || {}
             );
             input.setOptions(opt);
             var object = input.readObject();
-            MACROUTILS.timeEnd('osgjs.metric:ReaderParser.parseSceneGraph');
+            utils.timeEnd('osgjs.metric:ReaderParser.parseSceneGraph', notify.INFO);
             return object;
         } else {
-            Notify.log("can't parse scenegraph " + node);
+            notify.log("can't parse scenegraph " + node, notify.INFO);
         }
     } else {
-        MACROUTILS.time('osgjs.metric:ReaderParser.parseSceneGraphDeprecated');
+        utils.time('osgjs.metric:ReaderParser.parseSceneGraphDeprecated', notify.INFO);
         var nodeOld = ReaderParser.parseSceneGraphDeprecated(node);
-        MACROUTILS.timeEnd('osgjs.metric:ReaderParser.parseSceneGraphDeprecated');
+        utils.timeEnd('osgjs.metric:ReaderParser.parseSceneGraphDeprecated', notify.INFO);
         return nodeOld;
     }
     return undefined;
@@ -140,7 +139,7 @@ ReaderParser.parseSceneGraphDeprecated = function(node) {
                 osgjs.setImage(img);
             })
             .catch(function() {
-                Notify.log("Can't read image");
+                notify.log("Can't read image");
             });
     };
 
@@ -154,10 +153,10 @@ ReaderParser.parseSceneGraphDeprecated = function(node) {
             for (var t = 0, tl = textures.length; t < tl; t++) {
                 var file = getFieldBackwardCompatible('File', textures[t]);
                 if (!file) {
-                    Notify.log('no texture on unit ' + t + ' skip it');
+                    notify.log('no texture on unit ' + t + ' skip it');
                     continue;
                 }
-                var Texture = require('osg/Texture');
+                var Texture = require('osg/Texture').default;
                 var tex = new Texture();
                 setTexture(tex, textures[t]);
 
@@ -175,7 +174,7 @@ ReaderParser.parseSceneGraphDeprecated = function(node) {
 
         var material = getFieldBackwardCompatible('Material', json);
         if (material) {
-            var Material = require('osg/Material');
+            var Material = require('osg/Material').default;
             var newmaterial = new Material();
             setMaterial(newmaterial, material);
             osgjs.setAttributeAndModes(newmaterial);
@@ -234,7 +233,7 @@ ReaderParser.parseSceneGraphDeprecated = function(node) {
         newnode = new MatrixTransform();
         setName(newnode, node);
 
-        MACROUTILS.extend(newnode, node);
+        utils.extend(newnode, node);
         mat4.copy(newnode.getMatrix(), matrix);
         node = newnode;
     }
@@ -243,7 +242,7 @@ ReaderParser.parseSceneGraphDeprecated = function(node) {
     if (projection) {
         newnode = new Projection();
         setName(newnode, node);
-        MACROUTILS.extend(newnode, node);
+        utils.extend(newnode, node);
         mat4.copy(newnode.setProjectionMatrix(), projection);
         node = newnode;
     }
@@ -252,7 +251,7 @@ ReaderParser.parseSceneGraphDeprecated = function(node) {
     if (node.typeID === undefined) {
         newnode = new Node();
         setName(newnode, node);
-        MACROUTILS.extend(newnode, node);
+        utils.extend(newnode, node);
         node = newnode;
     }
 
@@ -268,4 +267,4 @@ ReaderParser.parseSceneGraphDeprecated = function(node) {
     return node;
 };
 
-module.exports = ReaderParser;
+export default ReaderParser;

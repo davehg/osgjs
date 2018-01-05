@@ -1,11 +1,11 @@
-var MACROUTILS = require('osg/Utils');
-var BufferArray = require('osg/BufferArray');
-var Geometry = require('osg/Geometry');
-var primitiveSet = require('osg/primitiveSet');
-var DrawElements = require('osg/DrawElements');
-var DrawArrays = require('osg/DrawArrays');
-var notify = require('osg/notify');
-var Graph = require('osgStats/Graph');
+import utils from 'osg/utils';
+import BufferArray from 'osg/BufferArray';
+import Geometry from 'osg/Geometry';
+import primitiveSet from 'osg/primitiveSet';
+import DrawElements from 'osg/DrawElements';
+import DrawArrays from 'osg/DrawArrays';
+import notify from 'osg/notify';
+import Graph from 'osgStats/Graph';
 
 // captions data (4 vertexes, indexes)
 // values data   (4 vertexes, indexes)
@@ -31,7 +31,7 @@ BufferStats.redColor = 7.0;
 BufferStats.greyColor = 4.0;
 BufferStats.whiteColor = 1.0;
 
-MACROUTILS.createPrototypeObject(BufferStats, {
+utils.createPrototypeObject(BufferStats, {
     getGeometry: function() {
         return this._geometry;
     },
@@ -246,4 +246,4 @@ MACROUTILS.createPrototypeObject(BufferStats, {
     }
 });
 
-module.exports = BufferStats;
+export default BufferStats;

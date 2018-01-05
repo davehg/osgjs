@@ -1,32 +1,41 @@
-'use strict';
-var Notify = require('osg/notify');
-var MACROUTILS = require('osg/Utils');
-var osgMath = require('osg/math');
-var NodeVisitor = require('osg/NodeVisitor');
-var CullSettings = require('osg/CullSettings');
-var CullStack = require('osg/CullStack');
-var mat4 = require('osg/glMatrix').mat4;
-var MatrixTransform = require('osg/MatrixTransform');
-var AutoTransform = require('osg/AutoTransform');
-var Projection = require('osg/Projection');
-var LightSource = require('osg/LightSource');
-var osgPool = require('osgUtil/osgPool');
-var cullVisitorHelper = require('osg/cullVisitorHelper');
-var Geometry = require('osg/Geometry');
-var RenderLeaf = require('osg/RenderLeaf');
-var RenderBin = require('osg/RenderBin');
-var RenderStage = require('osg/RenderStage');
-var Node = require('osg/Node');
-var Lod = require('osg/Lod');
-var Switch = require('osg/Switch');
-var PagedLOD = require('osg/PagedLOD');
-var Camera = require('osg/Camera');
-var TransformEnums = require('osg/transformEnums');
-var vec3 = require('osg/glMatrix').vec3;
-var Skeleton = require('osgAnimation/Skeleton');
-var RigGeometry = require('osgAnimation/RigGeometry');
-var Bone = require('osgAnimation/Bone');
-var MorphGeometry = require('osgAnimation/MorphGeometry');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
+import osgMath from 'osg/math';
+import NodeVisitor from 'osg/NodeVisitor';
+import CullSettings from 'osg/CullSettings';
+import CullStack from 'osg/CullStack';
+import { mat4 } from 'osg/glMatrix';
+import MatrixTransform from 'osg/MatrixTransform';
+import AutoTransform from 'osg/AutoTransform';
+import Projection from 'osg/Projection';
+import LightSource from 'osg/LightSource';
+import cullVisitorHelper from 'osg/cullVisitorHelper';
+import Geometry from 'osg/Geometry';
+import RenderLeaf from 'osg/RenderLeaf';
+import RenderBin from 'osg/RenderBin';
+import RenderStage from 'osg/RenderStage';
+import Node from 'osg/Node';
+import Lod from 'osg/Lod';
+import Switch from 'osg/Switch';
+import PagedLOD from 'osg/PagedLOD';
+import Camera from 'osg/Camera';
+import TransformEnums from 'osg/transformEnums';
+import { vec3 } from 'osg/glMatrix';
+import Skeleton from 'osgAnimation/Skeleton';
+import RigGeometry from 'osgAnimation/RigGeometry';
+import Bone from 'osgAnimation/Bone';
+import MorphGeometry from 'osgAnimation/MorphGeometry';
+import PooledArray from 'osg/PooledArray';
+import PooledResource from 'osg/PooledResource';
+
+var createRenderLeaf = function() {
+    return new RenderLeaf();
+};
+
+var createCullSettings = function() {
+    return new CullSettings();
+};
+
 /**
  * CullVisitor traverse the tree and collect Matrix/State for the rendering traverse
  * @class CullVisitor
@@ -52,15 +61,13 @@ var CullVisitor = function() {
     this._bbCornerNear = ~this._bbCornerFar & 7;
     /*jshint bitwise: true */
 
-    this._reserveLeafStack = [new RenderLeaf()];
-    this._reserveLeafStackCurrent = 0;
+    this._pooledLeaf = new PooledResource(createRenderLeaf);
 
-    this._reserveRenderStageStacks = {};
+    this._pooledRenderStages = {};
 
-    this._reserveCullSettingsStack = [new CullSettings()];
-    this._reserveCullSettingsStackCurrent = 0;
+    this._pooledCullSettings = new PooledResource(createCullSettings);
 
-    this._renderBinStack = [];
+    this._renderBinStack = new PooledArray();
     this.visitorType = NodeVisitor.CULL_VISITOR;
 
     this._identityMatrix = mat4.create();
@@ -79,11 +86,11 @@ var CullVisitor = function() {
 CullVisitor.registerApplyFunction = cullVisitorHelper.registerApplyFunction;
 CullVisitor.getApplyFunction = cullVisitorHelper.getApplyFunction;
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     CullVisitor,
-    MACROUTILS.objectInherit(
+    utils.objectInherit(
         CullStack.prototype,
-        MACROUTILS.objectInherit(NodeVisitor.prototype, {
+        utils.objectInherit(NodeVisitor.prototype, {
             applyFunctionArray: cullVisitorHelper.applyFunctionArray,
 
             distance: function(coord, matrix) {
@@ -175,20 +182,15 @@ MACROUTILS.createPrototypeObject(
 
             reset: function() {
                 CullStack.prototype.reset.call(this);
-                // Reset the stack before reseting the current leaf index.
-                // Reseting elements and refilling them later is faster than create new elements
-                // That's the reason to have a leafStack, see http://jsperf.com/refill/2
-                this.resetRenderLeafStack();
-                this._reserveLeafStackCurrent = 0;
 
-                this.resetCullSettingsStack();
-                this._reserveCullSettingsStackCurrent = 0;
+                this._pooledLeaf.reset();
+                this._pooledCullSettings.reset();
 
                 // renderstage / renderbin pools
-                for (var key in this._reserveRenderStageStacks) {
-                    this._reserveRenderStageStacks[key].reset();
+                for (var key in this._pooledRenderStages) {
+                    this._pooledRenderStages[key].reset();
                 }
-                RenderBin.resetStack();
+                RenderBin.reset();
 
                 this._computedNear = Number.POSITIVE_INFINITY;
                 this._computedFar = Number.NEGATIVE_INFINITY;
@@ -206,7 +208,7 @@ MACROUTILS.createPrototypeObject(
             // in osg you can push 0, in this case an identity matrix will be loaded
             addPositionedAttribute: function(matrix, attribute) {
                 var m = matrix ? matrix : this._identityMatrix;
-                this._currentRenderBin.getStage().positionedAttribute.push([m, attribute]);
+                this._currentRenderBin.getStage().addPositionAttribute(m, attribute);
             },
 
             pushStateSet: function(stateset) {
@@ -222,16 +224,16 @@ MACROUTILS.createPrototypeObject(
             },
 
             /** Pop the top state set and hence associated state group.
-         * Move the current state group to the parent of the popped
-         * state group.
-         */
+             * Move the current state group to the parent of the popped
+             * state group.
+             */
             popStateSet: function() {
                 var currentStateGraph = this._currentStateGraph;
                 var stateset = currentStateGraph.getStateSet();
-                this._currentStateGraph = currentStateGraph.parent;
+                this._currentStateGraph = currentStateGraph.getParent();
                 if (stateset.getBinName() !== undefined) {
                     var renderBinStack = this._renderBinStack;
-                    if (renderBinStack.length === 0) {
+                    if (renderBinStack.getLength() === 0) {
                         this._currentRenderBin = this._currentRenderBin.getStage();
                     } else {
                         this._currentRenderBin = renderBinStack.pop();
@@ -264,7 +266,7 @@ MACROUTILS.createPrototypeObject(
             clampProjectionMatrix: function(projection, znear, zfar, nearFarRatio, resultNearFar) {
                 var epsilon = 1e-6;
                 if (zfar < znear - epsilon) {
-                    Notify.log(
+                    notify.log(
                         'clampProjectionMatrix not applied, invalid depth range, znear = ' +
                             znear +
                             '  zfar = ' +
@@ -375,49 +377,21 @@ MACROUTILS.createPrototypeObject(
                 this.applyFunctionArray[node.nodeTypeID].call(this, node);
             },
 
+            createOrReuseRenderLeaf: function() {
+                return this._pooledLeaf.getOrCreateObject();
+            },
+
             createOrReuseRenderStage: function(classInstance) {
                 var type = !classInstance ? 'RenderStage' : classInstance.className();
-                var classCtor = !classInstance ? RenderStage : classInstance.constructor;
 
-                var stack;
-                if (this._reserveRenderStageStacks[type]) {
-                    stack = this._reserveRenderStageStacks[type];
-                } else {
-                    stack = new osgPool.OsgObjectMemoryStack(classCtor);
-                    this._reserveRenderStageStacks[type] = stack;
+                if (!this._pooledRenderStages[type]) {
+                    var classCtor = !classInstance ? RenderStage : classInstance.constructor;
+                    var createRenderStage = function() {
+                        return new classCtor();
+                    };
+                    this._pooledRenderStages[type] = new PooledResource(createRenderStage);
                 }
-                return stack.get().init();
-            },
-
-            createOrReuseRenderLeaf: function() {
-                var l = this._reserveLeafStack[this._reserveLeafStackCurrent++];
-                if (this._reserveLeafStackCurrent === this._reserveLeafStack.length) {
-                    this._reserveLeafStack.push(new RenderLeaf());
-                }
-                return l;
-            },
-
-            resetRenderLeafStack: function() {
-                for (var i = 0, j = this._reserveLeafStackCurrent; i <= j; i++) {
-                    this._reserveLeafStack[i].reset();
-                }
-            },
-
-            createOrReuseCullSettings: function() {
-                var l = this._reserveCullSettingsStack[this._reserveCullSettingsStackCurrent++];
-
-                if (
-                    this._reserveCullSettingsStackCurrent === this._reserveCullSettingsStack.length
-                ) {
-                    this._reserveCullSettingsStack.push(new CullSettings());
-                }
-                return l;
-            },
-
-            resetCullSettingsStack: function() {
-                for (var i = 0, j = this._reserveCullSettingsStackCurrent; i <= j; i++) {
-                    this._reserveCullSettingsStack[i].reset();
-                }
+                return this._pooledRenderStages[type].getOrCreateObject().init();
             },
 
             // function call after the push state in the geometry apply function
@@ -460,8 +434,8 @@ MACROUTILS.createPrototypeObject(
             },
 
             pushLeaf: function(node, depth) {
-                var leafs = this._currentStateGraph.leafs;
-                if (leafs.length === 0) {
+                var leafs = this._currentStateGraph.getLeafs();
+                if (!leafs.getLength()) {
                     this._currentRenderBin.addStateGraph(this._currentStateGraph);
                 }
 
@@ -494,8 +468,8 @@ var cameraApply = function(camera) {
     var stateset = camera.getStateSet();
     if (stateset) this.pushStateSet(stateset);
 
-    var modelview = this._reservedMatrixStack.get();
-    var projection = this._reservedMatrixStack.get();
+    var modelview = this._pooledMatrix.getOrCreateObject();
+    var projection = this._pooledMatrix.getOrCreateObject();
 
     if (camera.getReferenceFrame() === TransformEnums.RELATIVE_RF) {
         var lastProjectionMatrix = this.getCurrentProjectionMatrix();
@@ -513,10 +487,8 @@ var cameraApply = function(camera) {
     var previousZnear = this._computedNear;
     var previousZfar = this._computedFar;
 
-    // save cullSettings
-    // TODO Perf: why it's not a stack
-    // and is pollutin  GC ?
-    var previousCullsettings = this.createOrReuseCullSettings();
+    var previousCullsettings = this._pooledCullSettings.getOrCreateObject();
+    previousCullsettings.reset();
     previousCullsettings.setCullSettings(this);
 
     this._computedNear = Number.POSITIVE_INFINITY;
@@ -546,8 +518,6 @@ var cameraApply = function(camera) {
     if (camera.getRenderOrder() === Camera.NESTED_RENDER) {
         this.handleCullCallbacksAndTraverse(camera);
     } else {
-        // not tested
-
         var renderBin = this.getCurrentRenderBin();
         var previousStage = renderBin.getStage();
 
@@ -559,13 +529,10 @@ var cameraApply = function(camera) {
         rtts.setClearColor(camera.getClearColor());
         rtts.setClearMask(camera.getClearMask());
 
-        var vp;
-        if (camera.getViewport() === undefined) {
-            vp = previousStage.getViewport();
-        } else {
-            vp = camera.getViewport();
-        }
-        rtts.setViewport(vp);
+        var viewport = camera.getViewport() ? camera.getViewport() : previousStage.getViewport();
+        var scissor = camera.getScissor() ? camera.getScissor() : previousStage.getScissor();
+        rtts.setViewport(viewport);
+        rtts.setScissor(scissor);
 
         // skip positional state for now
         // ...
@@ -577,9 +544,13 @@ var cameraApply = function(camera) {
         this.setCurrentRenderBin(renderBin);
 
         if (camera.getRenderOrder() === Camera.PRE_RENDER) {
-            this.getCurrentRenderBin().getStage().addPreRenderStage(rtts, camera.renderOrderNum);
+            this.getCurrentRenderBin()
+                .getStage()
+                .addPreRenderStage(rtts, camera.renderOrderNum);
         } else {
-            this.getCurrentRenderBin().getStage().addPostRenderStage(rtts, camera.renderOrderNum);
+            this.getCurrentRenderBin()
+                .getStage()
+                .addPostRenderStage(rtts, camera.renderOrderNum);
         }
     }
 
@@ -607,7 +578,7 @@ var matrixTransformApply = function(node) {
     // push the culling mode.
     this.pushCurrentMask();
 
-    var matrix = this._reservedMatrixStack.get();
+    var matrix = this._pooledMatrix.getOrCreateObject();
     var lastMatrixStack = this.getCurrentModelViewMatrix();
     mat4.copy(matrix, lastMatrixStack);
     node.computeLocalToWorldMatrix(matrix);
@@ -631,7 +602,7 @@ var projectionApply = function(node) {
     this._numProjection++;
 
     var lastMatrixStack = this.getCurrentProjectionMatrix();
-    var matrix = this._reservedMatrixStack.get();
+    var matrix = this._pooledMatrix.getOrCreateObject();
     mat4.mul(matrix, lastMatrixStack, node.getProjectionMatrix());
     this.pushProjectionMatrix(matrix);
 
@@ -718,7 +689,7 @@ var geometryApply = function(node) {
     }
     if (osgMath.isNaN(depth)) {
         if (!loggedOnce) {
-            Notify.warn('warning geometry has a NaN depth, ' + modelview + ' center ' + tempVec);
+            notify.warn('warning geometry has a NaN depth, ' + modelview + ' center ' + tempVec);
             loggedOnce = true;
         }
     } else {
@@ -744,4 +715,4 @@ cullVisitorHelper.registerApplyFunction(LightSource.nodeTypeID, lightSourceApply
 cullVisitorHelper.registerApplyFunction(RigGeometry.nodeTypeID, geometryApply);
 cullVisitorHelper.registerApplyFunction(MorphGeometry.nodeTypeID, geometryApply);
 
-module.exports = CullVisitor;
+export default CullVisitor;

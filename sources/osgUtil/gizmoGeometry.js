@@ -1,11 +1,10 @@
-'use strict';
-var BufferArray = require('osg/BufferArray');
-var Geometry = require('osg/Geometry');
-var primitiveSet = require('osg/primitiveSet');
-var DrawArrays = require('osg/DrawArrays');
-var DrawElements = require('osg/DrawElements');
-var Program = require('osg/Program');
-var Shader = require('osg/Shader');
+import BufferArray from 'osg/BufferArray';
+import Geometry from 'osg/Geometry';
+import primitiveSet from 'osg/primitiveSet';
+import DrawArrays from 'osg/DrawArrays';
+import DrawElements from 'osg/DrawElements';
+import Program from 'osg/Program';
+import Shader from 'osg/Shader';
 
 var glPrecision = ['#ifdef GL_ES', 'precision highp float;', '#endif'].join('\n');
 
@@ -123,6 +122,12 @@ var getOrCreateShaderQuadCircle = function() {
         new Shader(Shader.FRAGMENT_SHADER, fragmentshader)
     );
     return programQC;
+};
+
+var resetPrograms = function () {
+    program = undefined;
+    program2D = undefined;
+    programQC = undefined;
 };
 
 var createDebugLineGeometry = function() {
@@ -350,5 +355,6 @@ GizmoGeometry.createTorusGeometry = createTorusGeometry;
 GizmoGeometry.createDebugLineGeometry = createDebugLineGeometry;
 GizmoGeometry.createPlaneGeometry = createPlaneGeometry;
 GizmoGeometry.createQuadCircleGeometry = createQuadCircleGeometry;
+GizmoGeometry.resetPrograms = resetPrograms;
 
-module.exports = GizmoGeometry;
+export default GizmoGeometry;

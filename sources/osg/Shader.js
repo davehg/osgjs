@@ -1,8 +1,7 @@
-'use strict';
-var Notify = require('osg/notify');
-var MACROUTILS = require('osg/Utils');
-var Timer = require('osg/Timer');
-var GLObject = require('osg/GLObject');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
+import Timer from 'osg/Timer';
+import GLObject from 'osg/GLObject';
 
 /**
  * Shader manage shader for vertex and fragment, you need both to create a glsl program.
@@ -66,9 +65,16 @@ Shader.flushAllDeletedGLShaders = function(gl) {
     return;
 };
 
-MACROUTILS.createPrototypeObject(
+Shader.onLostContext = function(gl) {
+    if (!Shader._sDeletedGLShaderCache.has(gl)) return;
+    var deleteList = Shader._sDeletedGLShaderCache.get(gl);
+    deleteList.length = 0;
+    return;
+};
+
+utils.createPrototypeObject(
     Shader,
-    MACROUTILS.objectInherit(GLObject.prototype, {
+    utils.objectInherit(GLObject.prototype, {
         setText: function(text) {
             this.text = text;
         },
@@ -106,7 +112,7 @@ MACROUTILS.createPrototypeObject(
 
             // we dont understand error try to print it instead of nothing
             if (r.exec(errors) === null) {
-                Notify.error(errors);
+                notify.error(errors);
                 return;
             }
 
@@ -123,64 +129,42 @@ MACROUTILS.createPrototypeObject(
 
                 if (line > linesLength) continue;
                 // webgl error report.
-                Notify.error('ERROR ' + m[2] + ' in line ' + line);
+                notify.error('ERROR ' + m[2] + ' in line ' + line);
 
                 var minLine = Math.max(0, line - 7);
                 var maxLine = Math.max(0, line - 2);
                 // for context
                 // log surrounding line priori to error with bof check
                 for (i = minLine; i <= maxLine; i++) {
-                    Notify.warn(lines[i].replace(/^[ \t]+/g, ''));
+                    notify.warn(lines[i].replace(/^[ \t]+/g, ''));
                 }
 
                 // Warn adds a lovely /!\ icon in front of the culprit line
                 maxLine = Math.max(0, line - 1);
-                Notify.error(lines[maxLine].replace(/^[ \t]+/g, ''));
+                notify.error(lines[maxLine].replace(/^[ \t]+/g, ''));
 
                 minLine = Math.min(linesLength, line);
                 maxLine = Math.min(linesLength, line + 5);
                 // for context
                 // surrounding line posterior to error (with eof check)
                 for (i = minLine; i < maxLine; i++) {
-                    Notify.warn(lines[i].replace(/^[ \t]+/g, ''));
+                    notify.warn(lines[i].replace(/^[ \t]+/g, ''));
                 }
             }
         },
 
-        compile: function(gl) {
+        compile: function(gl, errorCallback) {
             if (!this._gl) this.setGraphicContext(gl);
             this.shader = gl.createShader(this.type);
 
             var shaderText = this.text;
-            if (Shader.enableGLSLOptimizer && Shader.glslOptimizer) {
-                var shaderTypeString = this.type === Shader.VERTEX_SHADER ? 'vertex' : 'fragment';
-                Notify.infoFold(shaderTypeString + ' shader before optimization', shaderText);
-                // 1: opengl
-                // 2: opengl es 2.0
-                // 3: opengl es 3.0
-                var optimized = Shader.glslOptimizer(
-                    shaderText,
-                    '2',
-                    this.type === Shader.VERTEX_SHADER
-                );
-                if (optimized.indexOf('Error:') !== -1) {
-                    Notify.error(optimized);
-                } else if (optimized.length <= 1) {
-                    Notify.warnFold(
-                        'glsl optimizer returned an empty shader, the original will be used',
-                        shaderText
-                    );
-                } else {
-                    Notify.infoFold(shaderTypeString + ' shader after optimization', optimized);
-                    shaderText = optimized;
-                }
-            }
-
             gl.shaderSource(this.shader, shaderText);
-            MACROUTILS.timeStamp('osgjs.metrics:compileShader');
+            utils.timeStamp('osgjs.metrics:compileShader');
             gl.compileShader(this.shader);
             if (!gl.getShaderParameter(this.shader, gl.COMPILE_STATUS) && !gl.isContextLost()) {
                 var err = gl.getShaderInfoLog(this.shader);
+
+
                 this.processErrors(err, shaderText);
 
                 var tmpText = shaderText;
@@ -190,7 +174,8 @@ MACROUTILS.createPrototypeObject(
                     newText += i + ' ' + splittedText[i] + '\n';
                 }
                 // still logging whole source but folded
-                Notify.errorFold("can't compile shader", newText);
+                notify.errorFold("can't compile shader", newText);
+                if (errorCallback) errorCallback(this.shaderText, newText, err);
 
                 return false;
             }
@@ -199,7 +184,11 @@ MACROUTILS.createPrototypeObject(
         releaseGLObjects: function() {
             if (this._gl !== undefined) {
                 Shader.deleteGLShader(this._gl, this.shader);
+                GLObject.removeObject(this._gl, this);
             }
+            this.invalidate();
+        },
+        invalidate: function() {
             this.shader = undefined;
         }
     }),
@@ -207,4 +196,4 @@ MACROUTILS.createPrototypeObject(
     'Shader'
 );
 
-module.exports = Shader;
+export default Shader;

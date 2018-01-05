@@ -1,19 +1,17 @@
-'use strict';
+import chai from 'chai';
 
-var chai = require('chai');
-
-var getScene = require('tests/mockup/scene');
-var getBoxScene = require('tests/mockup/box');
-var Channel = require('osgAnimation/channel');
-var Animation = require('osgAnimation/animation');
-var UpdateMatrixTransform = require('osgAnimation/UpdateMatrixTransform');
-var StackedRotateAxis = require('osgAnimation/StackedRotateAxis');
-var StackedScale = require('osgAnimation/StackedScale');
-var StackedQuaternion = require('osgAnimation/StackedQuaternion');
-var StackedTranslate = require('osgAnimation/StackedTranslate');
-var StackedMatrix = require('osgAnimation/StackedMatrix');
-var ViewerOriginal = require('osgViewer/Viewer');
-var Utils = require('osg/Utils');
+import getScene from 'tests/mockup/scene';
+import getBoxScene from 'tests/mockup/box';
+import Channel from 'osgAnimation/channel';
+import Animation from 'osgAnimation/animation';
+import UpdateMatrixTransform from 'osgAnimation/UpdateMatrixTransform';
+import StackedRotateAxis from 'osgAnimation/StackedRotateAxis';
+import StackedScale from 'osgAnimation/StackedScale';
+import StackedQuaternion from 'osgAnimation/StackedQuaternion';
+import StackedTranslate from 'osgAnimation/StackedTranslate';
+import StackedMatrix from 'osgAnimation/StackedMatrix';
+import ViewerOriginal from 'osgViewer/Viewer';
+import Utils from 'osg/utils';
 
 var isNodeContext = function() {
     return typeof process !== 'undefined' && process.release.name === 'node'; // eslint-disable-line no-undef
@@ -87,6 +85,9 @@ var createFakeRenderer = function() {
         createBuffer: function() {},
         deleteBuffer: function() {},
 
+        colorMask: function() {},
+        clearDepth: function() {},
+        clearColor: function() {},
         scissor: function() {},
         blendColor: function() {},
         enable: function() {},
@@ -131,6 +132,7 @@ var createFakeRenderer = function() {
         renderbufferStorage: function() {},
         framebufferRenderbuffer: function() {},
         clear: function() {},
+        getQuery: function() {},
         viewport: function() {},
         cullFace: function() {},
         texImage2D: function() {},
@@ -400,7 +402,7 @@ document.createElement = function(type) {
     return document.createElementOld(type);
 };
 
-module.exports = {
+export default {
     checkNear: checkNear,
     createFakeRenderer: createFakeRenderer,
     removeCanvas: removeCanvas,

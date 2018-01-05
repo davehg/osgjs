@@ -1,19 +1,17 @@
-'use strict';
-var Camera = require('osg/Camera');
-var FrameBufferObject = require('osg/FrameBufferObject');
-var mat4 = require('osg/glMatrix').mat4;
-var Node = require('osg/Node');
-var Program = require('osg/Program');
-var Shader = require('osg/Shader');
-var Shape = require('osg/shape');
-var Texture = require('osg/Texture');
-var Transform = require('osg/Transform');
-var Uniform = require('osg/Uniform');
-var vec2 = require('osg/glMatrix').vec2;
-var vec3 = require('osg/glMatrix').vec3;
-var vec4 = require('osg/glMatrix').vec4;
-var Viewport = require('osg/Viewport');
-var Composer = require('osgUtil/Composer');
+import Camera from 'osg/Camera';
+import FrameBufferObject from 'osg/FrameBufferObject';
+import { mat4 } from 'osg/glMatrix';
+import Node from 'osg/Node';
+import Program from 'osg/Program';
+import Shader from 'osg/Shader';
+import Shape from 'osg/shape';
+import Texture from 'osg/Texture';
+import Transform from 'osg/Transform';
+import Uniform from 'osg/Uniform';
+import { vec2 } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
+import { vec4 } from 'osg/glMatrix';
+import Viewport from 'osg/Viewport';
 
 var WebVRCustom = {};
 
@@ -155,7 +153,20 @@ var getWebVRShader = function() {
     ].join('\n');
 
     return new Program(
-        new Shader(Shader.VERTEX_SHADER, Composer.Filter.defaultVertexShader),
+        new Shader(
+            Shader.VERTEX_SHADER,
+            [
+                'attribute vec3 Vertex;',
+                'varying vec2 vTexCoord0;',
+                'void main(void) {',
+                '  gl_Position = vec4(Vertex * 2.0 - 1.0, 1.0);',
+                '  vTexCoord0 = Vertex.xy;',
+                '}',
+                '',
+                '#define SHADER_NAME VRpostProcessing',
+                ''
+            ].join('\n')
+        ),
         new Shader(Shader.FRAGMENT_SHADER, fragmentshader)
     );
 };
@@ -331,4 +342,4 @@ WebVRCustom.getDefaultConfig = function(hmdConfig) {
     return hmd;
 };
 
-module.exports = WebVRCustom;
+export default WebVRCustom;

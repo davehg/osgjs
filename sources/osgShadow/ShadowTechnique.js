@@ -1,7 +1,6 @@
-'use strict';
-var Notify = require('osg/notify');
-var Object = require('osg/Object');
-var MACROUTILS = require('osg/Utils');
+import notify from 'osg/notify';
+import Object from 'osg/Object';
+import utils from 'osg/utils';
 
 /**
  *  ShadowTechnique provides an implementation interface of shadow techniques.
@@ -12,16 +11,15 @@ var ShadowTechnique = function() {
 
     this._shadowedScene = undefined;
     this._dirty = false;
-    // need to be computed
-    this._enabled = true;
+    this._continuousUpdate = true;
     // since dirtied, handy for static shadow map
-    this._filledOnce = false;
+    this._needRedraw = true;
 };
 
 /** @lends ShadowTechnique.prototype */
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     ShadowTechnique,
-    MACROUTILS.objectInherit(Object.prototype, {
+    utils.objectInherit(Object.prototype, {
         dirty: function() {
             this._dirty = true;
         },
@@ -30,20 +28,20 @@ MACROUTILS.createPrototypeObject(
             return this._shadowedScene;
         },
 
-        setEnabled: function(enabled) {
-            this._enabled = enabled;
+        setContinuousUpdate: function(enabled) {
+            this._continuousUpdate = enabled;
         },
 
-        isEnabled: function() {
-            return this._enabled;
+        isContinuousUpdate: function() {
+            return this._continuousUpdate;
         },
 
-        isFilledOnce: function() {
-            return this._filledOnce;
+        needRedraw: function() {
+            return this._needRedraw;
         },
 
         requestRedraw: function() {
-            this._filledOnce = false;
+            this._needRedraw = true;
         },
 
         setShadowedScene: function(shadowedScene) {
@@ -52,7 +50,7 @@ MACROUTILS.createPrototypeObject(
 
         init: function() {
             // well shouldn't be called
-            Notify.log('No ShadowTechnique activated: normal rendering activated');
+            notify.log('No ShadowTechnique activated: normal rendering activated');
         },
 
         valid: function() {
@@ -67,11 +65,11 @@ MACROUTILS.createPrototypeObject(
 
         cleanSceneGraph: function() {
             // well shouldn't be called
-            Notify.log('No ShadowTechnique activated: normal rendering activated');
+            notify.log('No ShadowTechnique activated: normal rendering activated');
         }
     }),
     'osgShadow',
     'ShadowTechnique'
 );
 
-module.exports = ShadowTechnique;
+export default ShadowTechnique;

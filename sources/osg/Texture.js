@@ -1,13 +1,12 @@
-'use strict';
-var Notify = require('osg/notify');
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
-var Uniform = require('osg/Uniform');
-var Image = require('osg/Image');
-var GLObject = require('osg/GLObject');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
+import Uniform from 'osg/Uniform';
+import Image from 'osg/Image';
+import GLObject from 'osg/GLObject';
 
-var TextureManager = require('osg/TextureManager');
-var WebglCaps = require('osg/WebGLCaps');
+import TextureManager from 'osg/TextureManager';
+import WebglCaps from 'osg/WebGLCaps';
 
 var ImageBitmap = window.ImageBitmap || function() {};
 
@@ -43,7 +42,7 @@ var checkAndFixEnum = function(mode, fallback) {
     var value = Texture[mode];
 
     if (value === undefined) {
-        Notify.warn('bad Texture enum argument ' + mode + '\n' + 'fallback to ' + fallback);
+        notify.warn('bad Texture enum argument ' + mode + '\n' + 'fallback to ' + fallback);
         return fallback;
     }
 
@@ -254,15 +253,20 @@ Texture.getEnumFromString = function(v) {
     return value;
 };
 
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     Texture,
-    MACROUTILS.objectInherit(
+    utils.objectInherit(
         GLObject.prototype,
-        MACROUTILS.objectInherit(StateAttribute.prototype, {
+        utils.objectInherit(StateAttribute.prototype, {
             attributeType: 'Texture',
 
             cloneType: function() {
                 return new Texture();
+            },
+
+            invalidate: function() {
+                this._textureObject = undefined;
+                this.dirty();
             },
 
             dirty: function() {
@@ -316,7 +320,7 @@ MACROUTILS.createPrototypeStateAttribute(
                 this._internalFormat = undefined;
                 this._dirtyMipmap = true;
                 this._textureTarget = Texture.TEXTURE_2D;
-                this._type = Texture.UNSIGNED_BYTE;
+                this.setInternalFormatType(Texture.UNSIGNED_BYTE);
                 this._isCompressed = false;
 
                 this._flipY = true;
@@ -347,7 +351,7 @@ MACROUTILS.createPrototypeStateAttribute(
 
                 if (w !== undefined) {
                     if (w > maxSize) {
-                        Notify.error(
+                        notify.error(
                             'width (' +
                                 w +
                                 ') too big for GPU. Max Texture Size is "' +
@@ -362,7 +366,7 @@ MACROUTILS.createPrototypeStateAttribute(
 
                 if (h !== undefined) {
                     if (h > maxSize) {
-                        Notify.error(
+                        notify.error(
                             'height (' +
                                 h +
                                 ') too big for GPU. Max Texture Size is "' +
@@ -379,7 +383,9 @@ MACROUTILS.createPrototypeStateAttribute(
             },
 
             init: function(state) {
-                if (!this._gl) this.setGraphicContext(state.getGraphicContext());
+                if (!this._gl) {
+                    this.setGraphicContext(state.getGraphicContext());
+                }
 
                 if (!this._textureObject) {
                     this._textureObject = Texture.getTextureManager(this._gl).generateTextureObject(
@@ -426,8 +432,9 @@ MACROUTILS.createPrototypeStateAttribute(
                     this._gl !== undefined
                 ) {
                     Texture.getTextureManager(this._gl).releaseTextureObject(this._textureObject);
+                    GLObject.removeObject(this._gl, this);
                 }
-                this._textureObject = undefined;
+                this.invalidate();
             },
 
             getWrapT: function() {
@@ -714,7 +721,7 @@ MACROUTILS.createPrototypeStateAttribute(
 
             applyTexImage2D: function(gl) {
                 var args = Array.prototype.slice.call(arguments, 1);
-                MACROUTILS.timeStamp('osgjs.metrics:Texture.texImage2d');
+                utils.timeStamp('osgjs.metrics:Texture.texImage2d');
 
                 // use parameters of pixel store
                 gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, this._flipY);
@@ -793,6 +800,7 @@ MACROUTILS.createPrototypeStateAttribute(
                 if (this._dirtyTextureObject) {
                     this.releaseGLObjects();
                     this._dirtyTextureObject = false;
+                    this.setGraphicContext(gl);
                 }
 
                 if (this._textureObject !== undefined && !this.isDirty()) {
@@ -895,4 +903,4 @@ Texture.createFromCanvas = function(canvas, format) {
     return Texture.createFromImage(canvas, format);
 };
 
-module.exports = Texture;
+export default Texture;

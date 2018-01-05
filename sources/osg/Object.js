@@ -1,19 +1,18 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
+import utils from 'osg/utils';
 
 /**
  *  Object class
  *  @class Object
  */
-var Object = function() {
+var OSGObject = function() {
     this._name = undefined;
     this._userdata = undefined;
-    this._instanceID = Object.getInstanceID();
+    this._instanceID = OSGObject.getInstanceID();
 };
 
 /** @lends Object.prototype */
-MACROUTILS.createPrototypeObject(
-    Object,
+utils.createPrototypeObject(
+    OSGObject,
     {
         // this method works only if constructor is set correctly
         // see issue https://github.com/cedricpinson/osgjs/issues/494
@@ -48,9 +47,9 @@ MACROUTILS.createPrototypeObject(
 
 // get an instanceID for each object
 var instanceID = 0;
-Object.getInstanceID = function() {
+OSGObject.getInstanceID = function() {
     instanceID += 1;
     return instanceID;
 };
 
-module.exports = Object;
+export default OSGObject;

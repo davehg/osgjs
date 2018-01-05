@@ -1,7 +1,6 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Object = require('osg/Object');
-var DatabasePager = require('osgDB/DatabasePager');
+import utils from 'osg/utils';
+import Object from 'osg/Object';
+import DatabasePager from 'osgDB/DatabasePager';
 
 var Scene = function() {
     Object.call(this);
@@ -9,9 +8,9 @@ var Scene = function() {
     this._sceneData = undefined;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     Scene,
-    MACROUTILS.objectInherit(Object.prototype, {
+    utils.objectInherit(Object.prototype, {
         getSceneData: function() {
             return this._sceneData;
         },
@@ -39,4 +38,4 @@ MACROUTILS.createPrototypeObject(
     'Scene'
 );
 
-module.exports = Scene;
+export default Scene;

@@ -1,8 +1,7 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var StateAttribute = require('osg/StateAttribute');
-var mat4 = require('osg/glMatrix').mat4;
-var vec3 = require('osg/glMatrix').vec3;
+import utils from 'osg/utils';
+import StateAttribute from 'osg/StateAttribute';
+import { mat4 } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
 
 var Viewport = function(x, y, w, h) {
     StateAttribute.call(this);
@@ -13,18 +12,13 @@ var Viewport = function(x, y, w, h) {
     this._height = h !== undefined ? h : 600;
 };
 
-MACROUTILS.createPrototypeStateAttribute(
+utils.createPrototypeStateAttribute(
     Viewport,
-    MACROUTILS.objectInherit(StateAttribute.prototype, {
+    utils.objectInherit(StateAttribute.prototype, {
         attributeType: 'Viewport',
 
         cloneType: function() {
             return new Viewport();
-        },
-
-        apply: function(state) {
-            var gl = state.getGraphicContext();
-            gl.viewport(this._x, this._y, this._width, this._height);
         },
 
         setViewport: function(x, y, width, height) {
@@ -66,10 +60,14 @@ MACROUTILS.createPrototypeStateAttribute(
 
                 return mat4.mul(offset, offset, mat4.mul(scale, scale, translate));
             };
-        })()
+        })(),
+
+        apply: function(state) {
+            state.applyViewport(this);
+        }
     }),
     'osg',
     'Viewport'
 );
 
-module.exports = Viewport;
+export default Viewport;

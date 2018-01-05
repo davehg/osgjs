@@ -1,9 +1,8 @@
-'use strict';
-var MACROUTILS = require('osg/Utils');
-var Lod = require('osg/Lod');
-var NodeVisitor = require('osg/NodeVisitor');
-var mat4 = require('osg/glMatrix').mat4;
-var vec3 = require('osg/glMatrix').vec3;
+import utils from 'osg/utils';
+import Lod from 'osg/Lod';
+import NodeVisitor from 'osg/NodeVisitor';
+import { mat4 } from 'osg/glMatrix';
+import { vec3 } from 'osg/glMatrix';
 
 /**
  *  PagedLOD that can contains paged child nodes
@@ -36,9 +35,9 @@ var PerRangeData = function() {
 };
 
 /** @lends PagedLOD.prototype */
-MACROUTILS.createPrototypeNode(
+utils.createPrototypeNode(
     PagedLOD,
-    MACROUTILS.objectInherit(Lod.prototype, {
+    utils.objectInherit(Lod.prototype, {
         // Functions here
         setRange: function(childNo, min, max) {
             if (childNo >= this._range.length) {
@@ -280,4 +279,4 @@ MACROUTILS.createPrototypeNode(
     'PagedLOD'
 );
 
-module.exports = PagedLOD;
+export default PagedLOD;

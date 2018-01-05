@@ -1,15 +1,13 @@
-'use strict';
-
-var MACROUTILS = require('osg/Utils');
-var vec3 = require('osg/glMatrix').vec3;
-var mat4 = require('osg/glMatrix').mat4;
-var Manipulator = require('osgGA/Manipulator');
-var OrbitManipulatorDeviceOrientationController = require('osgGA/OrbitManipulatorDeviceOrientationController');
-var OrbitManipulatorGamePadController = require('osgGA/OrbitManipulatorGamePadController');
-var OrbitManipulatorHammerController = require('osgGA/OrbitManipulatorHammerController');
-var OrbitManipulatorStandardMouseKeyboardController = require('osgGA/OrbitManipulatorStandardMouseKeyboardController');
-var OrbitManipulatorWebVRController = require('osgGA/OrbitManipulatorWebVRController');
-var DelayInterpolator = require('osgUtil/DelayInterpolator');
+import utils from 'osg/utils';
+import { vec3 } from 'osg/glMatrix';
+import { mat4 } from 'osg/glMatrix';
+import Manipulator from 'osgGA/Manipulator';
+import OrbitManipulatorDeviceOrientationController from 'osgGA/OrbitManipulatorDeviceOrientationController';
+import OrbitManipulatorGamePadController from 'osgGA/OrbitManipulatorGamePadController';
+import OrbitManipulatorHammerController from 'osgGA/OrbitManipulatorHammerController';
+import OrbitManipulatorStandardMouseKeyboardController from 'osgGA/OrbitManipulatorStandardMouseKeyboardController';
+import OrbitManipulatorWebVRController from 'osgGA/OrbitManipulatorWebVRController';
+import DelayInterpolator from 'osgUtil/DelayInterpolator';
 
 /**
  *  OrbitManipulator
@@ -44,9 +42,9 @@ var lowerOrEqual = function(val, limit) {
 };
 
 /** @lends OrbitManipulator.prototype */
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     OrbitManipulator,
-    MACROUTILS.objectInherit(Manipulator.prototype, {
+    utils.objectInherit(Manipulator.prototype, {
         init: function() {
             this._distance = 25.0;
             this._target = vec3.create();
@@ -177,7 +175,7 @@ MACROUTILS.createPrototypeObject(
         })(),
 
         computeHomePosition: function(boundStrategy) {
-            var bs = this.getHomeBound(boundStrategy);
+            var bs = this.getHomeBoundingSphere(boundStrategy);
             if (!bs || !bs.valid()) return;
 
             this.setDistance(this.getHomeDistance(bs));
@@ -247,24 +245,26 @@ MACROUTILS.createPrototypeObject(
             var rightDir = vec3.fromValues(1.0, 0.0, 0.0);
 
             return function(dx, dy) {
-                var pitch = Math.atan(-this._rotation[6] / this._rotation[5]) + dy / 10.0;
-                pitch = Math.min(Math.max(pitch, this._limitPitchDown), this._limitPitchUp);
+                var prevPitch = Math.atan(-this._rotation[6] / this._rotation[5]);
+                var pitch = this._computePitch(prevPitch, dy);
 
                 var deltaYaw = dx / 10.0;
                 var previousYaw = Math.atan2(this._rotation[4], this._rotation[0]);
-                var yaw = this._computeYaw(
-                    previousYaw,
-                    deltaYaw,
-                    this._limitYawLeft,
-                    this._limitYawRight
-                );
+                var yaw = this._computeYaw(previousYaw, deltaYaw);
                 mat4.fromRotation(this._rotation, -pitch, rightDir);
                 mat4.rotate(this._rotation, this._rotation, -yaw, this._upz);
             };
         })(),
 
-        _computeYaw: function(previousYaw, deltaYaw, left, right) {
+        _computePitch: function(prevPitch, dy) {
+            var pitch = prevPitch + dy / 10.0;
+            return Math.min(Math.max(pitch, this._limitPitchDown), this._limitPitchUp);
+        },
+
+        _computeYaw: function(previousYaw, deltaYaw) {
             var yaw = previousYaw + deltaYaw;
+            var left = this._limitYawLeft;
+            var right = this._limitYawRight;
 
             if (right !== Math.PI || left !== -Math.PI) {
                 if (right < left) {
@@ -409,4 +409,4 @@ OrbitManipulator.Hammer = OrbitManipulatorHammerController;
 OrbitManipulator.WebVR = OrbitManipulatorWebVRController;
 OrbitManipulator.StandardMouseKeyboard = OrbitManipulatorStandardMouseKeyboardController;
 
-module.exports = OrbitManipulator;
+export default OrbitManipulator;

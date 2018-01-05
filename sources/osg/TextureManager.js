@@ -1,6 +1,5 @@
-'use strict';
-var Notify = require('osg/notify');
-var Timer = require('osg/Timer');
+import notify from 'osg/notify';
+import Timer from 'osg/Timer';
 
 var TextureProfile = function(target, internalFormat, width, height) {
     this._target = target;
@@ -21,7 +20,7 @@ TextureProfile.prototype = {
         );
     },
     computeSize: function() {
-        var Texture = require('osg/Texture');
+        var Texture = require('osg/Texture').default;
 
         var numBitsPerTexel = 0;
         switch (this._internalFormat) {
@@ -180,13 +179,29 @@ TextureObjectSet.prototype = {
             this._orphanedTextureObjects[i].reset();
         }
         this._orphanedTextureObjects.length = 0;
-        Notify.info(
+        notify.info(
             'TextureManager: released ' +
                 nbTextures +
                 ' with ' +
                 nbTextures * size / (1024 * 1024) +
                 ' MB'
         );
+    },
+
+    onLostContext: function() {
+        var i, nbTextures;
+
+        nbTextures = this._orphanedTextureObjects.length;
+        for (i = 0; i < nbTextures; ++i) {
+            this._orphanedTextureObjects[i].reset();
+        }
+        this._orphanedTextureObjects.length = 0;
+
+        nbTextures = this._usedTextureObjects.length;
+        for (i = 0; i < nbTextures; ++i) {
+            this._usedTextureObjects[i].reset();
+        }
+        this._usedTextureObjects.length = 0;
     }
 };
 
@@ -235,7 +250,7 @@ TextureManager.prototype = {
             var nb = this._textureSetMap[keyTexture].getUsedTextureObjects().length;
             size *= nb;
             total += size;
-            Notify.notice(
+            notify.notice(
                 String(size) +
                     ' MB with ' +
                     nb +
@@ -248,12 +263,18 @@ TextureManager.prototype = {
             );
         }
 
-        Notify.notice(String(total) + ' MB in total');
+        notify.notice(String(total) + ' MB in total');
     },
 
     flushAllDeletedTextureObjects: function(gl) {
         for (var keyTexture in this._textureSetMap) {
             this._textureSetMap[keyTexture].flushAllDeletedTextureObjects(gl);
+        }
+    },
+
+    onLostContext: function(gl) {
+        for (var keyTexture in this._textureSetMap) {
+            this._textureSetMap[keyTexture].onLostContext(gl);
         }
     },
 
@@ -277,4 +298,4 @@ TextureManager.prototype = {
     }
 };
 
-module.exports = TextureManager;
+export default TextureManager;

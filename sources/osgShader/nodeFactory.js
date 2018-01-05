@@ -1,10 +1,9 @@
-'use strict';
-var Notify = require('osg/notify');
-var data = require('osgShader/node/data');
-var operations = require('osgShader/node/operations');
-var shaderUtils = require('osgShader/utils');
-var shaderLib = require('osgShader/shaderLib');
-var shadowLib = require('osgShadow/shaderLib');
+import notify from 'osg/notify';
+import data from 'osgShader/node/data';
+import operations from 'osgShader/node/operations';
+import shaderUtils from 'osgShader/utils';
+import shaderLib from 'osgShader/shaderLib';
+import shadowLib from 'osgShadow/shaderLib';
 
 var Factory = function() {
     this._nodes = new window.Map();
@@ -33,7 +32,7 @@ Factory.prototype = {
 
     registerNode: function(name, constructor) {
         if (this._nodes.has(name)) {
-            Notify.warn('Node ' + name + ' already registered');
+            notify.warn('Node ' + name + ' already registered');
         }
         this._nodes.set(name, constructor);
     },
@@ -50,7 +49,7 @@ Factory.prototype = {
             // - the node isn't registered by methods above
             // - you mistyped the name
             // - Core Node has changed its Name
-            Notify.warn('Node ' + name + ' does not exist');
+            notify.warn('Node ' + name + ' does not exist');
             return undefined;
         }
 
@@ -65,4 +64,4 @@ Factory.prototype = {
 
 var instance = new Factory();
 
-module.exports = instance;
+export default instance;

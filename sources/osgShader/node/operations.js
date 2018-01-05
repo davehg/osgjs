@@ -1,7 +1,6 @@
-'use strict';
-var Notify = require('osg/notify');
-var MACROUTILS = require('osg/Utils');
-var Node = require('osgShader/node/Node');
+import notify from 'osg/notify';
+import utils from 'osg/utils';
+import Node from 'osgShader/node/Node';
 
 // Abstract class
 // base operator contains helper for the constructor
@@ -24,9 +23,9 @@ var Add = function() {
     BaseOperator.call(this);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     Add,
-    MACROUTILS.objectInherit(BaseOperator.prototype, {
+    utils.objectInherit(BaseOperator.prototype, {
         type: 'Add',
 
         operator: '+',
@@ -46,7 +45,7 @@ MACROUTILS.createPrototypeObject(
             if (outType === 'vec2') return variable + '.rg';
             if (outType === 'float') return variable + '.r';
 
-            Notify.error('Mismatch type : ' + outType + ' with ' + inType + ', ' + variable);
+            notify.error('Mismatch type : ' + outType + ' with ' + inType + ', ' + variable);
             return variable;
         },
 
@@ -85,9 +84,9 @@ var Mult = function() {
     Add.call(this);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     Mult,
-    MACROUTILS.objectInherit(Add.prototype, {
+    utils.objectInherit(Add.prototype, {
         type: 'Mult',
         operator: '*'
     }),
@@ -101,9 +100,9 @@ var SetFromNode = function() {
     Add.call(this);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     SetFromNode,
-    MACROUTILS.objectInherit(Add.prototype, {
+    utils.objectInherit(Add.prototype, {
         type: 'SetFromNode'
     }),
     'osgShader',
@@ -121,9 +120,9 @@ var MatrixMultDirection = function() {
     this._inverseOp = false;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     MatrixMultDirection,
-    MACROUTILS.objectInherit(Add.prototype, {
+    utils.objectInherit(Add.prototype, {
         type: 'MatrixMultDirection',
         operator: '*',
         validInputs: ['vec', 'matrix'],
@@ -201,9 +200,9 @@ var MatrixMultPosition = function() {
     this._forceComplement = false;
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     MatrixMultPosition,
-    MACROUTILS.objectInherit(MatrixMultDirection.prototype, {
+    utils.objectInherit(MatrixMultDirection.prototype, {
         type: 'MatrixMultPosition',
         complement: '1.'
     }),
@@ -215,9 +214,9 @@ var Blend = function() {
     BaseOperator.apply(this);
     this._mode = 'MIX';
 };
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     Blend,
-    MACROUTILS.objectInherit(BaseOperator.prototype, {
+    utils.objectInherit(BaseOperator.prototype, {
         type: 'Blend',
         mode: function(mode) {
             this._mode = mode;
@@ -282,9 +281,9 @@ var InlineCode = function() {
     Node.call(this);
 };
 
-MACROUTILS.createPrototypeObject(
+utils.createPrototypeObject(
     InlineCode,
-    MACROUTILS.objectInherit(Node.prototype, {
+    utils.objectInherit(Node.prototype, {
         type: 'InlineCode',
         code: function(txt) {
             this._text = txt;
@@ -292,8 +291,8 @@ MACROUTILS.createPrototypeObject(
         },
         computeShader: function() {
             // merge inputs and outputs dict to search in both
-            var replaceVariables = MACROUTILS.objectMix({}, this._inputs);
-            replaceVariables = MACROUTILS.objectMix(replaceVariables, this._outputs);
+            var replaceVariables = utils.objectMix({}, this._inputs);
+            replaceVariables = utils.objectMix(replaceVariables, this._outputs);
 
             // find all %string
             var r = new RegExp('%[A-Za-z0-9_]+', 'gm');
@@ -306,8 +305,8 @@ MACROUTILS.createPrototypeObject(
                 var str = result[i].substr(1);
                 if (!done.has(str)) {
                     if (!replaceVariables[str]) {
-                        Notify.error('error with inline code\n' + this._text);
-                        Notify.error('input ' + str + ' not provided for ' + result[i]);
+                        notify.error('error with inline code\n' + this._text);
+                        notify.error('input ' + str + ' not provided for ' + result[i]);
                     }
                     var reg = new RegExp(result[i].toString(), 'gm');
                     text = text.replace(reg, replaceVariables[str].getVariable());
@@ -322,7 +321,7 @@ MACROUTILS.createPrototypeObject(
     'InlineCode'
 );
 
-module.exports = {
+export default {
     BaseOperator: BaseOperator,
     Mult: Mult,
     MatrixMultPosition: MatrixMultPosition,
